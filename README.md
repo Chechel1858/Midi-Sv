@@ -157,6 +157,29 @@ ST-Link запитает только процессор (аналоговая �
 st-flash --format ihex --reset write firmware/prebuilt/midi_cv_full.hex
 ```
 
+#### Если STM32CubeProgrammer не ставится (или сайт ST не даёт скачать)
+
+Прошить можно бесплатным **OpenOCD** с GitHub, без регистрации (Windows):
+
+1. Скачай `xpack-openocd-…-win32-x64.zip` со страницы
+   <https://github.com/xpack-dev-tools/openocd-xpack/releases> и распакуй, например в `C:\openocd`.
+2. Положи `midi_cv_full.hex` в папку `C:\openocd\bin`.
+3. Открой там командную строку (в Проводнике в адресной строке папки набери `cmd` и Enter) и выполни:
+   ```
+   openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -c "adapter speed 480" -c "program midi_cv_full.hex verify reset exit"
+   ```
+4. Успех выглядит так: `** Programmed Successfully **`, `** Verified OK **`, `** Resetting Target **`.
+
+Если пишет `Error: open failed` или `LIBUSB_ERROR_...` — Windows не дала программе доступ к ST-Link.
+Скачай **Zadig** (<https://zadig.akeo.ie>), запусти, в меню Options включи *List All Devices*,
+выбери в списке **STM32 STLink**, справа выбери драйвер **WinUSB** и нажми *Install / Replace Driver*.
+Потом повтори шаг 3.
+
+Если пишет `unable to connect to the target` / `init mode failed` — ST-Link работает, но не видит
+плату: проверь провода и ряд на ST-Link (см. шаг 3) и что белый провод даёт 3.3 В на пин 1.
+
+macOS: `brew install open-ocd`, Linux: `sudo apt install openocd` — команда та же.
+
 Если **Connect** не проходит:
 - проверь три провода (чаще всего перепутаны SWDIO и SWCLK);
 - плата должна быть запитана (USB воткнут);

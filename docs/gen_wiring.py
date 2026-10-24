@@ -722,7 +722,10 @@ body.append(f'''<section class="job" id="proshivka"><h2>Первая проши�
 <li>Все три провода — в ряд ST-Link без прорези (правый столбец на наклейке). На плате порядок обратный:
 <b>зелёный</b> ST-Link 2 → J13 4, <b>синий</b> ST-Link 4 → J13 3, <b>фиолетовый</b> ST-Link 6 → J13 2,
 <b>белый</b> ST-Link 8 → J13 1 (только если нет USB-кабеля).</li>
-<li>STM32CubeProgrammer → ST-LINK, SWD → <b>Connect</b> → файл <code>midi_cv_full.hex</code> → Start Programming.</li>
+<li>STM32CubeProgrammer → ST-LINK, SWD → <b>Connect</b> → файл <code>midi_cv_full.hex</code> → Start Programming.
+Не ставится CubeProgrammer — прошей через OpenOCD (бесплатно, с GitHub):<br>
+<code>openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -c "adapter speed 480" -c "program midi_cv_full.hex verify reset exit"</code><br>
+подробности — в README, раздел «Если STM32CubeProgrammer не ставится».</li>
 </ol>
 <h3>Что куда</h3>
 <table class="pins"><tr><th>Провод</th><th>ST-Link</th><th>Сигнал</th><th>Плата J13</th></tr>
