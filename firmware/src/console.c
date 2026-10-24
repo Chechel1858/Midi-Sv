@@ -123,7 +123,8 @@ static void cmd_help(void) {
     "  save                       store settings in flash\r\n"
     "  defaults                   factory settings (then 'save')\r\n"
     "  panic                      all notes off\r\n"
-    "  reboot\r\n");
+    "  reboot\r\n"
+    "  dfu                        restart into the USB firmware updater\r\n");
 }
 
 static bool set_source(int ch, char* name, char* arg) {
@@ -247,6 +248,11 @@ static void execute(char* cmdline) {
     console_printf("factory settings loaded, type 'save' to keep them\r\n");
   } else if (!strcmp(cmd, "panic")) {
     engine_panic();
+  } else if (!strcmp(cmd, "dfu")) {
+    console_printf("restarting into the USB updater, run: dfu-util -a 0 -D midi_cv_alpha.bin\r\n");
+    uint32_t t = g_ms;
+    while (g_ms - t < 100) tud_task(); // let the message go out
+    board_reboot_to_bootloader();
   } else if (!strcmp(cmd, "reboot")) {
     settings_save(&g_settings);
     board_reboot();

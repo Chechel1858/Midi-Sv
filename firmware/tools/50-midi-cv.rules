@@ -1,0 +1,3 @@
+# Linux: lets dfu-util talk to the MIDI-CV Alpha updater without sudo.
+#   sudo cp 50-midi-cv.rules /etc/udev/rules.d/ && sudo udevadm control --reload
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="0002", MODE="0666"

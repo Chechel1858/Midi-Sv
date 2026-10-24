@@ -10,6 +10,7 @@
 #define BUTTON_SHORT_MAX_MS 1000
 #define BUTTON_CHANNEL_MS   3000  // hold: MIDI channel learn
 #define BUTTON_OMNI_MS      8000  // hold: back to Omni
+#define BUTTON_FACTORY_MS   15000 // hold: factory settings
 #define LEARN_TIMEOUT_MS    10000
 #define RETRIGGER_MS        2
 #define CONFIRM_BLINK_MS    600
@@ -32,7 +33,7 @@ static uint32_t confirm_until;
 static bool btn_raw, btn_state;
 static uint16_t btn_stable_ms;
 static uint32_t btn_held_ms;
-static bool btn_long_fired, btn_omni_fired;
+static bool btn_long_fired, btn_omni_fired, btn_factory_fired;
 
 static bool save_requested;
 
@@ -356,6 +357,7 @@ void engine_button(bool pressed) {
       btn_held_ms = 0;
       btn_long_fired = false;
       btn_omni_fired = false;
+      btn_factory_fired = false;
     } else if (btn_held_ms < BUTTON_SHORT_MAX_MS) {
       button_short_press();
     }
@@ -371,6 +373,12 @@ void engine_button(bool pressed) {
     if (!btn_omni_fired && btn_held_ms >= BUTTON_OMNI_MS) {
       btn_omni_fired = true;
       g_settings.channel = CHANNEL_OMNI;
+      learn_done();
+    }
+    if (!btn_factory_fired && btn_held_ms >= BUTTON_FACTORY_MS) {
+      btn_factory_fired = true;
+      settings_defaults(&g_settings);
+      engine_settings_changed();
       learn_done();
     }
   }

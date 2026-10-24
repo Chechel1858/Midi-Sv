@@ -1,4 +1,5 @@
 // Minimal startup for STM32F2/F4: vector table, .data/.bss init, call main.
+// Used by both the bootloader (at 0x08000000) and the application (at APP_BASE).
 #include <stdint.h>
 
 extern uint32_t _sidata, _sdata, _edata, _sbss, _ebss, _estack;
@@ -53,6 +54,9 @@ const vector_t g_vectors[16 + IRQ_COUNT] = {
 };
 
 void Reset_Handler(void) {
+  // Point the core at this image's vector table (the app is not at 0x08000000)
+  *(volatile uint32_t*) 0xE000ED08u = (uint32_t) g_vectors; // SCB->VTOR
+
   uint32_t* src = &_sidata;
   for (uint32_t* dst = &_sdata; dst < &_edata;) *dst++ = *src++;
   for (uint32_t* dst = &_sbss; dst < &_ebss;) *dst++ = 0;

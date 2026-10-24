@@ -10,10 +10,10 @@
 #include "board.h"
 #include "console.h"
 #include "engine.h"
-#include "hal.h"
 #include "midi_parser.h"
 #include "settings.h"
 #include "tusb.h"
+#include "usb_hw.h"
 
 static midi_parser_t din_parser, usb_parser;
 
@@ -54,27 +54,17 @@ int main(void) {
   board_init();
 
   bool loaded = settings_load(&g_settings);
-  // LEARN held while powering up: factory settings
-  bool factory = board_button_pressed();
-  if (factory) {
-    settings_defaults(&g_settings);
-    settings_save(&g_settings);
-    hal_led_note(true);
-    while (board_button_pressed()) {} // don't let the release count as a press
-    hal_led_note(false);
-  }
   engine_init();
 
   midi_parser_init(&din_parser);
   midi_parser_init(&usb_parser);
 
   console_init();
-  board_usb_init();
+  usb_hw_init();
   board_watchdog_init();
 
   console_print_banner();
-  if (factory) console_printf("LEARN held at power-up: factory settings restored\r\n> ");
-  else if (!loaded) console_printf("no saved settings, using defaults\r\n> ");
+  if (!loaded) console_printf("no saved settings, using defaults\r\n> ");
 
   uint32_t last_ms = g_ms;
   for (;;) {

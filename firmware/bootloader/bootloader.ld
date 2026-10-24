@@ -1,13 +1,13 @@
-/* Common layout for STM32F205RB / F405RG / F446RE.
- * FLASH: sectors 0..2 (48 KB) for code, sector 3 (0x0800C000) holds settings.
- * RAM:   64 KB, the smallest of the three parts (F205RB). */
+/* USB DFU bootloader: flash sectors 0-1 (see common/memory_map.h).
+ * The top 16 bytes of RAM are left alone: the app leaves the
+ * "stay in DFU" request there. */
 
 ENTRY(Reset_Handler)
 
 MEMORY
 {
-  FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 48K
-  RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 64K
+  FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 32K
+  RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 64K - 16
 }
 
 _estack = ORIGIN(RAM) + LENGTH(RAM);

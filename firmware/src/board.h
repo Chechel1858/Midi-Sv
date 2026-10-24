@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "clock.h"
 #include "stm32f4xx.h"
 
 // ---- Pins -----------------------------------------------------------------
@@ -29,14 +30,6 @@
 // PC3  MIDI_LEARN  <- LEARN button S1, 10k pull-up, pressed = low
 // Y1   HSE crystal (frequency auto-detected at boot)
 
-#define SYSCLK_HZ 120000000u // safe for F205 (max 120 MHz) and the F4 parts
-#define APB1_HZ   (SYSCLK_HZ / 4)
-#define APB2_HZ   (SYSCLK_HZ / 2)
-
-// Settings live in flash sector 3 (16 KB at 0x0800C000); code uses sectors 0..2
-#define SETTINGS_FLASH_ADDR   0x0800C000u
-#define SETTINGS_FLASH_SECTOR 3u
-
 typedef enum {
   CHIP_UNKNOWN = 0,
   CHIP_F205,   // STM32F2xx
@@ -53,7 +46,6 @@ typedef struct {
 } board_info_t;
 
 extern board_info_t g_board;
-extern volatile uint32_t g_ms;
 
 void board_init(void);
 const char* board_chip_name(void);
@@ -69,10 +61,9 @@ uint32_t midi_uart_errors(void);
 bool debug_uart_read(uint8_t* b);
 void debug_uart_write(const uint8_t* p, uint32_t n);
 
-void board_usb_init(void);
-
 void board_watchdog_init(void);
 void board_watchdog_feed(void);
 void board_reboot(void);
+void board_reboot_to_bootloader(void); // USB DFU mode for firmware updates
 
 #endif

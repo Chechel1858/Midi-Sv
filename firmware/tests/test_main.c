@@ -288,6 +288,14 @@ static void test_learn_button(void) {
   for (int i = 0; i < 8100; i++) { engine_button(true); tick(1); }
   for (int i = 0; i < 50; i++) { engine_button(false); tick(1); }
   CHECK(g_settings.channel == CHANNEL_OMNI);
+
+  // Hold 15 s -> factory settings (the learned filter CC goes back to 74)
+  CHECK(g_settings.cv[CV_OUT_FILTER].cc == 21);
+  engine_take_save_request();
+  for (int i = 0; i < 15100; i++) { engine_button(true); tick(1); }
+  for (int i = 0; i < 50; i++) { engine_button(false); tick(1); }
+  CHECK(g_settings.cv[CV_OUT_FILTER].cc == 74);
+  CHECK(engine_take_save_request());
 }
 
 static void test_clock(void) {

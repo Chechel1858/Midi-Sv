@@ -1,4 +1,4 @@
-// User settings, kept in flash (sector 3) with a CRC.
+// User settings, kept in flash (sector 2, see common/memory_map.h) with a CRC.
 #ifndef SETTINGS_H
 #define SETTINGS_H
 
