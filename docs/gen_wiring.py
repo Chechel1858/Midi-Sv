@@ -117,7 +117,7 @@ class Board:
             a(f'<line class="mcupin" x1="{o2}" y1="578" x2="{o2}" y2="584"/>')
             a(f'<line class="mcupin" x1="{o2}" y1="640" x2="{o2}" y2="646"/>')
         a('<text class="silk tiny" x="304" y="616" text-anchor="middle">STM32</text>')
-        a('<text class="silk tiny" x="304" y="628" text-anchor="middle">F446</text>')
+        a('<text class="silk tiny" x="304" y="628" text-anchor="middle">F205</text>')
         a('<rect class="smd" x="280" y="664" width="14" height="10"/>')
         # test pads J25..J31
         for i, (x, y) in enumerate(TESTPADS):
@@ -707,7 +707,7 @@ body.append('<nav class="chips" aria-label="Схемы">' + "".join(f'<a href="#
 
 body.append(f'''<section class="job" id="obzor"><h2>Обзор платы</h2>
 <p class="lede">Три зоны: сверху аналоговый фильтр (стерео, L и R), посередине питание (из USB делаются ±15 В),
-снизу MIDI, процессор STM32F446 и выходы управляющих напряжений.</p>
+снизу MIDI, процессор STM32F205 и выходы управляющих напряжений.</p>
 <div class="grid wide">{fig("obzor", "Все разъёмы, площадки и кнопка. CV, GATE и CLOCK на этой плате — круглые площадки под пайку, а не гнёзда.")}</div>
 </section>''')
 
