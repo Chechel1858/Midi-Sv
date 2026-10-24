@@ -13,7 +13,7 @@
   --accent: #e8a317; --accent-soft: #e8a31733;
   --pcb: #24452f; --pcb-edge: #17301f; --silk: #e8efe6; --plastic: #f1efe7; --black-part: #161a18;
   --metal: #c3c9cc; --pad: #d8d2bf; --stlink: #3f9a5e33;
-  --w-blue: #2f6fdb; --w-amber: #d48806; --w-red: #d23f3f; --w-teal: #128a78; --w-violet: #7a52c7;
+  --w-blue: #2f6fdb; --w-amber: #d48806; --w-red: #d23f3f; --w-teal: #128a78; --w-violet: #7a52c7; --w-green: #1f9d55; --w-white: #b9c0bb;
   --w-usb: #56635b; --w-midi: #2f6fdb; --w-audio: #128a78; --w-pot: #7a52c7;
   --z1: #2f6fdb; --z2: #128a78; --z3: #7a52c7; --z4: #d23f3f;
   --f-display: "Unbounded", "Golos Text", system-ui, sans-serif;
@@ -23,13 +23,13 @@
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #111613; --fg: #e4ebe5; --muted: #9aa89f; --line: #2c3730; --card: #1a211c;
   --accent: #f2b33a; --accent-soft: #f2b33a33; --pcb: #29513a; --pcb-edge: #3b6a4d; --stlink: #3f9a5e44;
-  --w-blue: #6b9bf0; --w-amber: #f0a92a; --w-red: #ef6b6b; --w-teal: #3cc4ac; --w-violet: #a98af0;
+  --w-blue: #6b9bf0; --w-amber: #f0a92a; --w-red: #ef6b6b; --w-teal: #3cc4ac; --w-violet: #a98af0; --w-green: #4cc38a; --w-white: #eef1ee;
   --w-usb: #9aa89f; --w-midi: #6b9bf0; --w-audio: #3cc4ac; --w-pot: #a98af0;
   --z1: #6b9bf0; --z2: #3cc4ac; --z3: #a98af0; --z4: #ef6b6b; color-scheme: dark; } }
 :root[data-theme="dark"] {
   --bg: #111613; --fg: #e4ebe5; --muted: #9aa89f; --line: #2c3730; --card: #1a211c;
   --accent: #f2b33a; --accent-soft: #f2b33a33; --pcb: #29513a; --pcb-edge: #3b6a4d; --stlink: #3f9a5e44;
-  --w-blue: #6b9bf0; --w-amber: #f0a92a; --w-red: #ef6b6b; --w-teal: #3cc4ac; --w-violet: #a98af0;
+  --w-blue: #6b9bf0; --w-amber: #f0a92a; --w-red: #ef6b6b; --w-teal: #3cc4ac; --w-violet: #a98af0; --w-green: #4cc38a; --w-white: #eef1ee;
   --w-usb: #9aa89f; --w-midi: #6b9bf0; --w-audio: #3cc4ac; --w-pot: #a98af0;
   --z1: #6b9bf0; --z2: #3cc4ac; --z3: #a98af0; --z4: #ef6b6b; color-scheme: dark; }
 
@@ -115,6 +115,9 @@ svg.diagram { display: block; width: 100%; min-width: 560px; height: auto; font-
 .wlabel { fill: var(--fg); font-size: 13px; font-weight: 600; }
 .w-blue { stroke: var(--w-blue); } .wireend.w-blue { fill: var(--w-blue); }
 .w-amber { stroke: var(--w-amber); } .wireend.w-amber { fill: var(--w-amber); }
+.w-green { stroke: var(--w-green); } .wireend.w-green { fill: var(--w-green); }
+.w-violet { stroke: var(--w-violet); } .wireend.w-violet { fill: var(--w-violet); }
+.w-white { stroke: var(--w-white); }
 .w-red { stroke: var(--w-red); }
 .w-gnd { stroke: var(--fg); } .wireend.w-gnd { fill: var(--fg); }
 .w-usb { stroke: var(--w-usb); } .wireend.w-usb { fill: var(--w-usb); }
@@ -805,35 +808,40 @@ DIN-разъёмы и USB справа. На каждой схеме жёлты�
 <rect class="hdrpin big" x="153" y="176" width="16" height="16"/>
 <text class="pinname" x="86.0" y="189.0" text-anchor="end">3.3V 7</text>
 <text class="pinnum" x="196.0" y="189.0" text-anchor="start">8 3.3V</text>
+<line class="wire w-white dashed" x1="270" y1="184" x2="320" y2="184"/>
+<text class="lblsub halo" x="326.0" y="189.0" text-anchor="start">белый — не надевать</text>
 <rect class="hdrpin big" x="117" y="220" width="16" height="16"/>
 <rect class="hdrpin big pinused" x="153" y="220" width="16" height="16"/>
 <text class="pinname" x="86.0" y="233.0" text-anchor="end">SWIM 5</text>
 <text class="pinname" x="196.0" y="220.0" text-anchor="start">6 SWCLK</text>
-<line class="wire w-blue" x1="161" y1="228" x2="270" y2="228"/>
+<line class="wire w-violet" x1="161" y1="228" x2="270" y2="228"/>
 <rect class="hdrpin big" x="117" y="264" width="16" height="16"/>
 <rect class="hdrpin big pinused" x="153" y="264" width="16" height="16"/>
 <text class="pinname" x="86.0" y="277.0" text-anchor="end">GND 3</text>
 <text class="pinname" x="196.0" y="264.0" text-anchor="start">4 GND</text>
-<line class="wire w-gnd" x1="161" y1="272" x2="270" y2="272"/>
+<line class="wire w-blue" x1="161" y1="272" x2="270" y2="272"/>
 <rect class="hdrpin big" x="117" y="308" width="16" height="16"/>
 <rect class="hdrpin big pinused" x="153" y="308" width="16" height="16"/>
 <text class="pinname" x="86.0" y="321.0" text-anchor="end">RST 1</text>
 <text class="pinname" x="196.0" y="308.0" text-anchor="start">2 SWDIO</text>
-<line class="wire w-amber" x1="161" y1="316" x2="270" y2="316"/>
+<line class="wire w-green" x1="161" y1="316" x2="270" y2="316"/>
 <text class="devline" x="145.0" y="362.0" text-anchor="middle">прорезь в стенке — со стороны</text>
 <text class="devline" x="145.0" y="380.0" text-anchor="middle">нечётных пинов (RST, GND, SWIM…)</text>
 <text class="warn" x="145.0" y="430.0" text-anchor="middle">3.3V и 5.0V не подключать</text>
 <rect class="dev" x="115" y="442" width="60" height="40" rx="4"/>
 <text class="lblsub" x="190.0" y="468.0" text-anchor="start">в USB компьютера</text>
-<path class="wire w-blue" d="M270.0,228.0 L286.0,228.0 L286.0,272.0 L415.1,272.0"/>
-<circle class="wireend w-blue" cx="270.0" cy="228.0" r="4"/>
-<circle class="wireend w-blue" cx="415.1" cy="272.0" r="4"/>
-<path class="wire w-gnd" d="M270.0,272.0 L300.0,272.0 L300.0,290.9 L415.1,290.9"/>
-<circle class="wireend w-gnd" cx="270.0" cy="272.0" r="4"/>
-<circle class="wireend w-gnd" cx="415.1" cy="290.9" r="4"/>
-<path class="wire w-amber" d="M270.0,316.0 L314.0,316.0 L314.0,309.8 L415.1,309.8"/>
-<circle class="wireend w-amber" cx="270.0" cy="316.0" r="4"/>
-<circle class="wireend w-amber" cx="415.1" cy="309.8" r="4"/>
+<path class="wire w-violet" d="M270.0,228.0 L286.0,228.0 L286.0,272.0 L415.1,272.0"/>
+<circle class="wireend w-violet" cx="270.0" cy="228.0" r="4"/>
+<circle class="wireend w-violet" cx="415.1" cy="272.0" r="4"/>
+<text class="wlabel halo" x="292.0" y="222.0" text-anchor="start">фиолетовый</text>
+<path class="wire w-blue" d="M270.0,272.0 L300.0,272.0 L300.0,290.9 L415.1,290.9"/>
+<circle class="wireend w-blue" cx="270.0" cy="272.0" r="4"/>
+<circle class="wireend w-blue" cx="415.1" cy="290.9" r="4"/>
+<text class="wlabel halo" x="306.0" y="266.0" text-anchor="start">синий</text>
+<path class="wire w-green" d="M270.0,316.0 L314.0,316.0 L314.0,309.8 L415.1,309.8"/>
+<circle class="wireend w-green" cx="270.0" cy="316.0" r="4"/>
+<circle class="wireend w-green" cx="415.1" cy="309.8" r="4"/>
+<text class="wlabel halo" x="320.0" y="310.0" text-anchor="start">зелёный</text>
 <text class="pinnum halo" x="448.7" y="258.1" text-anchor="start">1</text>
 <text class="pinnum halo" x="448.7" y="277.0" text-anchor="start">2</text>
 <text class="pinnum halo" x="448.7" y="295.9" text-anchor="start">3</text>
@@ -851,24 +859,25 @@ DIN-разъёмы и USB справа. На каждой схеме жёлты�
 <circle class="wireend w-usb" cx="794.4" cy="124.8" r="4"/>
 <circle class="wireend w-usb" cx="900.0" cy="230.0" r="4"/>
 <text class="wlabel halo" x="905.0" y="150.0" text-anchor="start">USB-кабель</text>
-</svg></div><figcaption>Три провода из ряда ST-Link без прорези (пины 2, 4, 6) в разъём SWD на плате (пины 4, 3, 2). Питание — от USB-кабеля.</figcaption></figure>
+</svg></div><figcaption>Зелёный, синий и фиолетовый — из ряда ST-Link без прорези (пины 2, 4, 6) в разъём SWD на плате (пины 4, 3, 2). Белый не нужен. Питание — от USB-кабеля.</figcaption></figure>
 <div class="steps">
 <h3>Порядок</h3>
 <ol>
 <li>Впаяй 4-пиновую гребёнку в первые 4 отверстия <b>SWD (J13)</b>. Если там уже стоит разъём — паять не надо.</li>
 <li>Воткни USB-B в компьютер. Найди пин 1: на нём <b>3.3 В</b>. Пин 3 звонится с корпусом USB-разъёма — это земля.</li>
-<li>Провода (все три — из одного ряда ST-Link, где нет прорези):
-<b>ST-Link 2 SWDIO → J13 4</b>, <b>ST-Link 4 GND → J13 3</b>, <b>ST-Link 6 SWCLK → J13 2</b>.</li>
+<li>Шлейф из 4 проводов надевается без перекрещивания, все три провода — в ряд ST-Link без прорези:
+<b>зелёный</b> ST-Link 2 → J13 4, <b>синий</b> ST-Link 4 → J13 3, <b>фиолетовый</b> ST-Link 6 → J13 2.
+<b>Белый</b> никуда не надевать.</li>
 <li>STM32CubeProgrammer → ST-LINK, SWD → <b>Connect</b> → файл <code>midi_cv_full.hex</code> → Start Programming.</li>
 </ol>
 <h3>Что куда</h3>
-<table class="pins"><tr><th>ST-Link</th><th>Сигнал</th><th>Плата J13</th></tr>
-<tr><td>2</td><td><span class="swatch" style="background:var(--w-amber)"></span>SWDIO</td><td>4</td></tr>
-<tr><td>4 (или 3)</td><td><span class="swatch" style="background:var(--fg)"></span>GND</td><td>3</td></tr>
-<tr><td>6</td><td><span class="swatch" style="background:var(--w-blue)"></span>SWCLK</td><td>2</td></tr>
-<tr><td>7, 8</td><td>3.3V</td><td>не подключать</td></tr>
-<tr><td>1, 5, 9, 10</td><td>RST, SWIM, 5V</td><td>не нужны</td></tr></table>
-<p class="note">Не уверен, какой ряд? Перепутать ряды не страшно: ничего не сгорит, просто не будет Connect — переставь три провода на соседний ряд.</p>
+<table class="pins"><tr><th>Провод</th><th>ST-Link</th><th>Сигнал</th><th>Плата J13</th></tr>
+<tr><td><span class="swatch" style="background:var(--w-green)"></span>зелёный</td><td>2</td><td>SWDIO</td><td>4</td></tr>
+<tr><td><span class="swatch" style="background:var(--w-blue)"></span>синий</td><td>4</td><td>GND</td><td>3</td></tr>
+<tr><td><span class="swatch" style="background:var(--w-violet)"></span>фиолетовый</td><td>6</td><td>SWCLK</td><td>2</td></tr>
+<tr><td><span class="swatch" style="background:var(--w-white);outline:1px solid var(--line)"></span>белый</td><td>—</td><td>(лёг бы на 3.3V)</td><td>—</td></tr>
+</table>
+<p class="note">Не уверен, какой ряд? Перепутать ряды не страшно: ничего не сгорит, просто не будет Connect — переставь три провода на соседний ряд. Проверь, что на другом конце шлейфа цвета идут в том же порядке: белый, фиолетовый, синий, зелёный.</p>
 </div></div></section><section class="job" id="usb"><h2>USB: работа и обновление прошивки</h2>
 <p class="lede">Один и тот же кабель. Разница только в том, держишь ли ты LEARN в момент подключения.</p>
 <div class="pair"><figure><div class="scroll"><svg viewBox="0 0 560 470" role="img" aria-label="Обычное включение" class="diagram">
