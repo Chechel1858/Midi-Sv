@@ -5,6 +5,7 @@ units, top-left origin, same orientation as the photo)."""
 import sys
 
 OUT = sys.argv[1]
+FRAGMENT = "--fragment" in sys.argv  # no doctype/head: for publishing as an artifact
 
 # ---------------------------------------------------------------------------
 # Board model
@@ -284,40 +285,59 @@ v.leader((R, 760), v.T(517, 720), "MIDI IN", "start", "нижний DIN")
 figs["obzor"] = v.render("Вид сверху на плату: где какие разъёмы, площадки и кнопка")
 
 # 2. First flash with ST-Link -------------------------------------------------
-v = View("proshivka", 980, 480, (150, 400, 500, 680), (300, 40), 1.45, hl=("swd", "usb"), proto=False)
-# ST-Link dongle on the left
-sx, sy = 30, 150
-v.add(f'<rect class="stlink" x="{sx}" y="{sy}" width="190" height="250" rx="14"/>')
-v.add(f'<rect class="dev" x="{sx + 60}" y="{sy - 50}" width="70" height="54" rx="4"/>')  # USB plug
-v.text(sx + 95, sy - 60, "в USB компьютера", "lblsub", "middle")
-v.text(sx + 95, sy + 34, "ST-LINK V2", "devtitle", "middle")
-v.text(sx + 95, sy + 54, "надписи на корпусе", "devline", "middle")
-st_pins = [("3.3V", "red"), ("SWCLK", "blue"), ("GND", "gnd"), ("SWDIO", "amber")]
+v = View("proshivka", 980, 520, (150, 400, 500, 680), (330, 60), 1.35, hl=("swd", "usb"), proto=False)
+# ST-Link V2 clone, 10-pin header as printed on its case. Drawn with row 1 at
+# the bottom so the three wires reach J13 (pins 2, 3, 4 top to bottom) without crossing.
+sx, sy = 20, 70
+v.add(f'<rect class="stlink" x="{sx}" y="{sy}" width="250" height="330" rx="14"/>')
+v.text(sx + 125, sy + 28, "ST-LINK V2: разъём 2×5", "devtitle", "middle")
+hx0, hx1 = sx + 78, sx + 168          # header outline
+odd_x, even_x = sx + 105, sx + 141   # pin columns
+rows = [  # top to bottom: (odd pin, odd name, even pin, even name)
+    (9, "5.0V", 10, "5.0V"),
+    (7, "3.3V", 8, "3.3V"),
+    (5, "SWIM", 6, "SWCLK"),
+    (3, "GND", 4, "GND"),
+    (1, "RST", 2, "SWDIO"),
+]
+ry = lambda k: sy + 70 + k * 44
+v.add(f'<rect class="hdroutline" x="{hx0}" y="{ry(0) - 22}" width="{hx1 - hx0}" height="{44 * 5}" rx="4"/>')
+# key slot on the odd-pin wall, at row 3 (as drawn on the case)
+v.add(f'<rect class="slot" x="{hx0 - 3}" y="{ry(2) - 12}" width="8" height="24"/>')
+used = {2: "w-amber", 4: "w-gnd", 6: "w-blue"}
 st_xy = {}
-for i, (name, cls) in enumerate(st_pins):
-    py = sy + 92 + i * 38
-    v.add(f'<rect class="hdrpin big" x="{sx + 150}" y="{py - 9}" width="18" height="18"/>')
-    v.text(sx + 138, py + 5, name, "pinname", "end")
-    st_xy[name] = (sx + 168, py)
+for k, (on, oname, en, ename) in enumerate(rows):
+    y = ry(k)
+    for n, x in ((on, odd_x), (en, even_x)):
+        cls = "hdrpin big" + (" pinused" if n in used else "")
+        v.add(f'<rect class="{cls}" x="{x - 8}" y="{y - 8}" width="16" height="16"/>')
+    v.text(hx0 - 12, y + 5, f"{oname} {on}", "pinname", "end")
+    st_xy[en] = (sx + 250, y)
+    if en in used:
+        v.text(hx1 + 8, y - 8, f"{en} {ename}", "pinname")
+        v.add(f'<line class="wire {used[en]}" x1="{even_x}" y1="{y}" x2="{sx + 250}" y2="{y}"/>')
+    else:
+        v.text(hx1 + 8, y + 5, f"{en} {ename}", "pinnum")
+v.text(sx + 125, ry(4) + 46, "прорезь в стенке — со стороны", "devline", "middle")
+v.text(sx + 125, ry(4) + 64, "нечётных пинов (RST, GND, SWIM…)", "devline", "middle")
+v.text(sx + 125, sy + 360, "3.3V и 5.0V не подключать", "warn", "middle")
+v.add(f'<rect class="dev" x="{sx + 95}" y="{sy + 372}" width="60" height="40" rx="4"/>')
+v.text(sx + 170, sy + 398, "в USB компьютера", "lblsub")
 swd = [v.T(x, y) for x, y in SWD_PINS]
 right_edge = v.T(232, 0)[0]
-# wires: ST-Link -> J13 pins 2, 3, 4
-for name, cls, pin, lane in (("SWCLK", "w-blue", 1, 245), ("GND", "w-gnd", 2, 262), ("SWDIO", "w-amber", 3, 279)):
-    x0, y0 = st_xy[name]
+# wires: ST-Link pin 6 -> J13 pin 2, pin 4 -> J13 pin 3, pin 2 -> J13 pin 4
+for st_pin, cls, pin, lane in ((6, "w-blue", 1, 286), (4, "w-gnd", 2, 300), (2, "w-amber", 3, 314)):
+    x0, y0 = st_xy[st_pin]
     px, py = swd[pin]
     v.wire([(x0, y0), (lane, y0), (lane, py), (px, py)], cls)
-x0, y0 = st_xy["3.3V"]
-v.add(f'<line class="wire w-red dashed" x1="{x0}" y1="{y0}" x2="{x0 + 40}" y2="{y0}"/>')
-v.text(x0 + 46, y0 - 8, "не подключать", "warn")
-# pin numbers next to J13
 for i, (px, py) in enumerate(swd):
     v.text(right_edge + 8, py + 5, f"{i + 1}", "pinnum halo")
-v.leader((610, 24), v.T(213, 541), "пин 1: 3.3 В при включённом USB", "start")
+v.leader((600, 34), v.T(213, 541), "J13, пин 1: 3.3 В при включённом USB", "start")
 # PC / USB power
 ux, uy = v.T(494, 448)
-v.box(830, 190, 140, 100, "Компьютер", ["питание платы", "по USB"])
-v.wire([(ux, uy), (900, uy), (900, 190)], "w-usb", "USB-кабель", (905, 100), "start")
-figs["proshivka"] = v.render("ST-Link подключается к разъёму SWD (J13) тремя проводами, плата питается от USB")
+v.box(830, 230, 140, 100, "Компьютер", ["питание платы", "по USB"])
+v.wire([(ux, uy), (900, uy), (900, 230)], "w-usb", "USB-кабель", (905, 150), "start")
+figs["proshivka"] = v.render("Три провода из одного ряда разъёма ST-Link (пины 2, 4, 6) в разъём SWD на плате (пины 4, 3, 2)")
 
 # 3. USB: normal start vs updater ---------------------------------------------
 def usb_panel(uid, title, hold, devices, led):
@@ -592,6 +612,9 @@ svg.diagram { display: block; width: 100%; min-width: 560px; height: auto; font-
 .hdr { fill: var(--black-part); }
 .hdrpin { fill: #e3b341; }
 .hdrpin.big { stroke: #0005; }
+.hdrpin.pinused { fill: var(--accent); stroke: var(--fg); stroke-width: 1.5; }
+.hdroutline { fill: var(--black-part); stroke: var(--fg); stroke-width: 1.5; }
+.slot { fill: var(--card); }
 .metal { fill: var(--metal); stroke: #0004; }
 .metalin { fill: #8d9599; }
 .din { fill: var(--black-part); }
@@ -677,22 +700,24 @@ body.append(f'''<section class="job" id="obzor"><h2>Обзор платы</h2>
 
 body.append(f'''<section class="job" id="proshivka"><h2>Первая прошивка через ST-Link</h2>
 <p class="lede">Нужна один раз: заливает загрузчик и прошивку вместе. Дальше обновления идут по USB.</p>
-<div class="grid">{fig("proshivka", "Три провода от ST-Link в разъём SWD, питание — от USB-кабеля. Провод 3.3V не нужен.")}
+<div class="grid">{fig("proshivka", "Три провода из ряда ST-Link без прорези (пины 2, 4, 6) в разъём SWD на плате (пины 4, 3, 2). Питание — от USB-кабеля.")}
 <div class="steps">
 <h3>Порядок</h3>
 <ol>
 <li>Впаяй 4-пиновую гребёнку в первые 4 отверстия <b>SWD (J13)</b>. Если там уже стоит разъём — паять не надо.</li>
 <li>Воткни USB-B в компьютер. Найди пин 1: на нём <b>3.3 В</b>. Пин 3 звонится с корпусом USB-разъёма — это земля.</li>
-<li>Провода: <b>SWCLK → 2</b>, <b>GND → 3</b>, <b>SWDIO → 4</b>.</li>
+<li>Провода (все три — из одного ряда ST-Link, где нет прорези):
+<b>ST-Link 2 SWDIO → J13 4</b>, <b>ST-Link 4 GND → J13 3</b>, <b>ST-Link 6 SWCLK → J13 2</b>.</li>
 <li>STM32CubeProgrammer → ST-LINK, SWD → <b>Connect</b> → файл <code>midi_cv_full.hex</code> → Start Programming.</li>
 </ol>
-<h3>Разъём J13</h3>
-<table class="pins"><tr><th>Пин</th><th>Сигнал</th><th>ST-Link</th></tr>
-<tr><td>1</td><td>+3.3 В</td><td>не подключать</td></tr>
-<tr><td>2</td><td>SWCLK</td><td><span class="swatch" style="background:var(--w-blue)"></span>SWCLK</td></tr>
-<tr><td>3</td><td>GND</td><td><span class="swatch" style="background:var(--fg)"></span>GND</td></tr>
-<tr><td>4</td><td>SWDIO</td><td><span class="swatch" style="background:var(--w-amber)"></span>SWDIO</td></tr>
-<tr><td>5, 6</td><td>не подключены</td><td>—</td></tr></table>
+<h3>Что куда</h3>
+<table class="pins"><tr><th>ST-Link</th><th>Сигнал</th><th>Плата J13</th></tr>
+<tr><td>2</td><td><span class="swatch" style="background:var(--w-amber)"></span>SWDIO</td><td>4</td></tr>
+<tr><td>4 (или 3)</td><td><span class="swatch" style="background:var(--fg)"></span>GND</td><td>3</td></tr>
+<tr><td>6</td><td><span class="swatch" style="background:var(--w-blue)"></span>SWCLK</td><td>2</td></tr>
+<tr><td>7, 8</td><td>3.3V</td><td>не подключать</td></tr>
+<tr><td>1, 5, 9, 10</td><td>RST, SWIM, 5V</td><td>не нужны</td></tr></table>
+<p class="note">Не уверен, какой ряд? Перепутать ряды не страшно: ничего не сгорит, просто не будет Connect — переставь три провода на соседний ряд.</p>
 </div></div></section>''')
 
 body.append(f'''<section class="job" id="usb"><h2>USB: работа и обновление прошивки</h2>
@@ -767,5 +792,8 @@ html = f'''<!doctype html>
 </div>
 </body></html>
 '''
+if FRAGMENT:
+    html = html.split("<title>", 1)[1]
+    html = "<title>" + html.replace("</head><body>", "").replace("</body></html>", "")
 open(OUT, "w").write(html)
 print("written", OUT, len(html))
