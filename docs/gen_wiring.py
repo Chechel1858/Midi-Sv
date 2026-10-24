@@ -286,19 +286,19 @@ figs["obzor"] = v.render("Вид сверху на плату: где какие
 
 # 2. First flash with ST-Link -------------------------------------------------
 v = View("proshivka", 980, 520, (150, 400, 500, 680), (330, 60), 1.35, hl=("swd", "usb"), proto=False)
-# ST-Link V2 clone, 10-pin header as printed on its case. Drawn with row 1 at
-# the bottom so the three wires reach J13 (pins 2, 3, 4 top to bottom) without crossing.
+# ST-Link V2 clone, 10-pin header exactly as printed on its case (pins 1-2 on top,
+# key slot next to pin 5). The order reverses on J13; nested lanes keep wires apart.
 sx, sy = 20, 70
 v.add(f'<rect class="stlink" x="{sx}" y="{sy}" width="250" height="330" rx="14"/>')
 v.text(sx + 125, sy + 28, "ST-LINK V2: разъём 2×5", "devtitle", "middle")
 hx0, hx1 = sx + 78, sx + 168          # header outline
 odd_x, even_x = sx + 105, sx + 141   # pin columns
-rows = [  # top to bottom: (odd pin, odd name, even pin, even name)
-    (9, "5.0V", 10, "5.0V"),
-    (7, "3.3V", 8, "3.3V"),
-    (5, "SWIM", 6, "SWCLK"),
-    (3, "GND", 4, "GND"),
+rows = [  # top to bottom, as on the case: (odd pin, odd name, even pin, even name)
     (1, "RST", 2, "SWDIO"),
+    (3, "GND", 4, "GND"),
+    (5, "SWIM", 6, "SWCLK"),
+    (7, "3.3V", 8, "3.3V"),
+    (9, "5.0V", 10, "5.0V"),
 ]
 ry = lambda k: sy + 70 + k * 44
 v.add(f'<rect class="hdroutline" x="{hx0}" y="{ry(0) - 22}" width="{hx1 - hx0}" height="{44 * 5}" rx="4"/>')
@@ -318,19 +318,16 @@ for k, (on, oname, en, ename) in enumerate(rows):
         v.add(f'<line class="wire {used[en]}" x1="{even_x}" y1="{y}" x2="{sx + 250}" y2="{y}"/>')
     else:
         v.text(hx1 + 8, y + 5, f"{en} {ename}", "pinnum")
-    if en == 8:  # white wire of the ribbon: left unplugged
-        v.add(f'<line class="wire w-white dashed" x1="{sx + 250}" y1="{y}" x2="{sx + 300}" y2="{y}"/>')
-        v.text(sx + 306, y + 5, "белый — не надевать", "lblsub halo")
 v.text(sx + 125, ry(4) + 46, "прорезь в стенке — со стороны", "devline", "middle")
 v.text(sx + 125, ry(4) + 64, "нечётных пинов (RST, GND, SWIM…)", "devline", "middle")
-v.text(sx + 125, sy + 360, "3.3V и 5.0V не подключать", "warn", "middle")
+v.text(sx + 125, sy + 360, "3.3V, 5.0V и белый провод — не подключать", "warn", "middle")
 v.add(f'<rect class="dev" x="{sx + 95}" y="{sy + 372}" width="60" height="40" rx="4"/>')
 v.text(sx + 170, sy + 398, "в USB компьютера", "lblsub")
 swd = [v.T(x, y) for x, y in SWD_PINS]
 right_edge = v.T(232, 0)[0]
 # wires: ST-Link pin 6 -> J13 pin 2, pin 4 -> J13 pin 3, pin 2 -> J13 pin 4
-for st_pin, cls, pin, lane, colour in ((6, "w-violet", 1, 286, "фиолетовый"), (4, "w-blue", 2, 300, "синий"),
-                                       (2, "w-green", 3, 314, "зелёный")):
+for st_pin, cls, pin, lane, colour in ((2, "w-green", 3, 280, "зелёный"), (4, "w-blue", 2, 296, "синий"),
+                                       (6, "w-violet", 1, 312, "фиолетовый")):
     x0, y0 = st_xy[st_pin]
     px, py = swd[pin]
     v.wire([(x0, y0), (lane, y0), (lane, py), (px, py)], cls)
@@ -714,7 +711,7 @@ body.append(f'''<section class="job" id="proshivka"><h2>Первая проши�
 <ol>
 <li>Впаяй 4-пиновую гребёнку в первые 4 отверстия <b>SWD (J13)</b>. Если там уже стоит разъём — паять не надо.</li>
 <li>Воткни USB-B в компьютер. Найди пин 1: на нём <b>3.3 В</b>. Пин 3 звонится с корпусом USB-разъёма — это земля.</li>
-<li>Шлейф из 4 проводов надевается без перекрещивания, все три провода — в ряд ST-Link без прорези:
+<li>Все три провода — в ряд ST-Link без прорези (правый столбец на наклейке). На плате порядок обратный:
 <b>зелёный</b> ST-Link 2 → J13 4, <b>синий</b> ST-Link 4 → J13 3, <b>фиолетовый</b> ST-Link 6 → J13 2.
 <b>Белый</b> никуда не надевать.</li>
 <li>STM32CubeProgrammer → ST-LINK, SWD → <b>Connect</b> → файл <code>midi_cv_full.hex</code> → Start Programming.</li>

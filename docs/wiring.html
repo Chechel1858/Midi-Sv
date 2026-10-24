@@ -801,47 +801,45 @@ DIN-разъёмы и USB справа. На каждой схеме жёлты�
 <rect class="hdroutline" x="98" y="118" width="90" height="220" rx="4"/>
 <rect class="slot" x="95" y="216" width="8" height="24"/>
 <rect class="hdrpin big" x="117" y="132" width="16" height="16"/>
-<rect class="hdrpin big" x="153" y="132" width="16" height="16"/>
-<text class="pinname" x="86.0" y="145.0" text-anchor="end">5.0V 9</text>
-<text class="pinnum" x="196.0" y="145.0" text-anchor="start">10 5.0V</text>
+<rect class="hdrpin big pinused" x="153" y="132" width="16" height="16"/>
+<text class="pinname" x="86.0" y="145.0" text-anchor="end">RST 1</text>
+<text class="pinname" x="196.0" y="132.0" text-anchor="start">2 SWDIO</text>
+<line class="wire w-green" x1="161" y1="140" x2="270" y2="140"/>
 <rect class="hdrpin big" x="117" y="176" width="16" height="16"/>
-<rect class="hdrpin big" x="153" y="176" width="16" height="16"/>
-<text class="pinname" x="86.0" y="189.0" text-anchor="end">3.3V 7</text>
-<text class="pinnum" x="196.0" y="189.0" text-anchor="start">8 3.3V</text>
-<line class="wire w-white dashed" x1="270" y1="184" x2="320" y2="184"/>
-<text class="lblsub halo" x="326.0" y="189.0" text-anchor="start">белый — не надевать</text>
+<rect class="hdrpin big pinused" x="153" y="176" width="16" height="16"/>
+<text class="pinname" x="86.0" y="189.0" text-anchor="end">GND 3</text>
+<text class="pinname" x="196.0" y="176.0" text-anchor="start">4 GND</text>
+<line class="wire w-blue" x1="161" y1="184" x2="270" y2="184"/>
 <rect class="hdrpin big" x="117" y="220" width="16" height="16"/>
 <rect class="hdrpin big pinused" x="153" y="220" width="16" height="16"/>
 <text class="pinname" x="86.0" y="233.0" text-anchor="end">SWIM 5</text>
 <text class="pinname" x="196.0" y="220.0" text-anchor="start">6 SWCLK</text>
 <line class="wire w-violet" x1="161" y1="228" x2="270" y2="228"/>
 <rect class="hdrpin big" x="117" y="264" width="16" height="16"/>
-<rect class="hdrpin big pinused" x="153" y="264" width="16" height="16"/>
-<text class="pinname" x="86.0" y="277.0" text-anchor="end">GND 3</text>
-<text class="pinname" x="196.0" y="264.0" text-anchor="start">4 GND</text>
-<line class="wire w-blue" x1="161" y1="272" x2="270" y2="272"/>
+<rect class="hdrpin big" x="153" y="264" width="16" height="16"/>
+<text class="pinname" x="86.0" y="277.0" text-anchor="end">3.3V 7</text>
+<text class="pinnum" x="196.0" y="277.0" text-anchor="start">8 3.3V</text>
 <rect class="hdrpin big" x="117" y="308" width="16" height="16"/>
-<rect class="hdrpin big pinused" x="153" y="308" width="16" height="16"/>
-<text class="pinname" x="86.0" y="321.0" text-anchor="end">RST 1</text>
-<text class="pinname" x="196.0" y="308.0" text-anchor="start">2 SWDIO</text>
-<line class="wire w-green" x1="161" y1="316" x2="270" y2="316"/>
+<rect class="hdrpin big" x="153" y="308" width="16" height="16"/>
+<text class="pinname" x="86.0" y="321.0" text-anchor="end">5.0V 9</text>
+<text class="pinnum" x="196.0" y="321.0" text-anchor="start">10 5.0V</text>
 <text class="devline" x="145.0" y="362.0" text-anchor="middle">прорезь в стенке — со стороны</text>
 <text class="devline" x="145.0" y="380.0" text-anchor="middle">нечётных пинов (RST, GND, SWIM…)</text>
-<text class="warn" x="145.0" y="430.0" text-anchor="middle">3.3V и 5.0V не подключать</text>
+<text class="warn" x="145.0" y="430.0" text-anchor="middle">3.3V, 5.0V и белый провод — не подключать</text>
 <rect class="dev" x="115" y="442" width="60" height="40" rx="4"/>
 <text class="lblsub" x="190.0" y="468.0" text-anchor="start">в USB компьютера</text>
-<path class="wire w-violet" d="M270.0,228.0 L286.0,228.0 L286.0,272.0 L415.1,272.0"/>
+<path class="wire w-green" d="M270.0,140.0 L280.0,140.0 L280.0,309.8 L415.1,309.8"/>
+<circle class="wireend w-green" cx="270.0" cy="140.0" r="4"/>
+<circle class="wireend w-green" cx="415.1" cy="309.8" r="4"/>
+<text class="wlabel halo" x="286.0" y="134.0" text-anchor="start">зелёный</text>
+<path class="wire w-blue" d="M270.0,184.0 L296.0,184.0 L296.0,290.9 L415.1,290.9"/>
+<circle class="wireend w-blue" cx="270.0" cy="184.0" r="4"/>
+<circle class="wireend w-blue" cx="415.1" cy="290.9" r="4"/>
+<text class="wlabel halo" x="302.0" y="178.0" text-anchor="start">синий</text>
+<path class="wire w-violet" d="M270.0,228.0 L312.0,228.0 L312.0,272.0 L415.1,272.0"/>
 <circle class="wireend w-violet" cx="270.0" cy="228.0" r="4"/>
 <circle class="wireend w-violet" cx="415.1" cy="272.0" r="4"/>
-<text class="wlabel halo" x="292.0" y="222.0" text-anchor="start">фиолетовый</text>
-<path class="wire w-blue" d="M270.0,272.0 L300.0,272.0 L300.0,290.9 L415.1,290.9"/>
-<circle class="wireend w-blue" cx="270.0" cy="272.0" r="4"/>
-<circle class="wireend w-blue" cx="415.1" cy="290.9" r="4"/>
-<text class="wlabel halo" x="306.0" y="266.0" text-anchor="start">синий</text>
-<path class="wire w-green" d="M270.0,316.0 L314.0,316.0 L314.0,309.8 L415.1,309.8"/>
-<circle class="wireend w-green" cx="270.0" cy="316.0" r="4"/>
-<circle class="wireend w-green" cx="415.1" cy="309.8" r="4"/>
-<text class="wlabel halo" x="320.0" y="310.0" text-anchor="start">зелёный</text>
+<text class="wlabel halo" x="318.0" y="222.0" text-anchor="start">фиолетовый</text>
 <text class="pinnum halo" x="448.7" y="258.1" text-anchor="start">1</text>
 <text class="pinnum halo" x="448.7" y="277.0" text-anchor="start">2</text>
 <text class="pinnum halo" x="448.7" y="295.9" text-anchor="start">3</text>
@@ -865,7 +863,7 @@ DIN-разъёмы и USB справа. На каждой схеме жёлты�
 <ol>
 <li>Впаяй 4-пиновую гребёнку в первые 4 отверстия <b>SWD (J13)</b>. Если там уже стоит разъём — паять не надо.</li>
 <li>Воткни USB-B в компьютер. Найди пин 1: на нём <b>3.3 В</b>. Пин 3 звонится с корпусом USB-разъёма — это земля.</li>
-<li>Шлейф из 4 проводов надевается без перекрещивания, все три провода — в ряд ST-Link без прорези:
+<li>Все три провода — в ряд ST-Link без прорези (правый столбец на наклейке). На плате порядок обратный:
 <b>зелёный</b> ST-Link 2 → J13 4, <b>синий</b> ST-Link 4 → J13 3, <b>фиолетовый</b> ST-Link 6 → J13 2.
 <b>Белый</b> никуда не надевать.</li>
 <li>STM32CubeProgrammer → ST-LINK, SWD → <b>Connect</b> → файл <code>midi_cv_full.hex</code> → Start Programming.</li>
