@@ -304,7 +304,7 @@ ry = lambda k: sy + 70 + k * 44
 v.add(f'<rect class="hdroutline" x="{hx0}" y="{ry(0) - 22}" width="{hx1 - hx0}" height="{44 * 5}" rx="4"/>')
 # key slot on the odd-pin wall, at row 3 (as drawn on the case)
 v.add(f'<rect class="slot" x="{hx0 - 3}" y="{ry(2) - 12}" width="8" height="24"/>')
-used = {2: "w-green", 4: "w-blue", 6: "w-violet"}  # colours of the 4-wire dupont ribbon
+used = {2: "w-green", 4: "w-blue", 6: "w-violet", 8: "w-white"}  # colours of the 4-wire dupont ribbon
 st_xy = {}
 for k, (on, oname, en, ename) in enumerate(rows):
     y = ry(k)
@@ -320,7 +320,7 @@ for k, (on, oname, en, ename) in enumerate(rows):
         v.text(hx1 + 8, y + 5, f"{en} {ename}", "pinnum")
 v.text(sx + 125, ry(4) + 46, "прорезь в стенке — со стороны", "devline", "middle")
 v.text(sx + 125, ry(4) + 64, "нечётных пинов (RST, GND, SWIM…)", "devline", "middle")
-v.text(sx + 125, sy + 360, "3.3V, 5.0V и белый провод — не подключать", "warn", "middle")
+v.text(sx + 125, sy + 360, "5.0V не подключать", "warn", "middle")
 v.add(f'<rect class="dev" x="{sx + 95}" y="{sy + 372}" width="60" height="40" rx="4"/>')
 v.text(sx + 170, sy + 398, "в USB компьютера", "lblsub")
 swd = [v.T(x, y) for x, y in SWD_PINS]
@@ -332,13 +332,21 @@ for st_pin, cls, pin, lane, colour in ((2, "w-green", 3, 280, "зелёный"),
     px, py = swd[pin]
     v.wire([(x0, y0), (lane, y0), (lane, py), (px, py)], cls)
     v.text(lane + 6, y0 - 6, colour, "wlabel halo")
+# white = 3.3V from the ST-Link powers the MCU when there is no USB cable.
+# Routed below the header and up its right side, so it crosses no other wire.
+x0, y0 = st_xy[8]
+p1x, p1y = swd[0]
+hdr_bottom = v.T(0, 534 + 6 * 14 + 2)[1]
+lane_r = v.T(225, 0)[0] + 7
+v.wire([(x0, y0), (274, y0), (274, hdr_bottom + 12), (lane_r, hdr_bottom + 12), (lane_r, p1y), (p1x, p1y)], "w-white")
+v.text(282, hdr_bottom + 32, "белый: 3.3 В, только без USB-кабеля", "wlabel halo")
 for i, (px, py) in enumerate(swd):
     v.text(right_edge + 8, py + 5, f"{i + 1}", "pinnum halo")
 v.leader((600, 34), v.T(213, 541), "J13, пин 1: 3.3 В при включённом USB", "start")
 # PC / USB power
 ux, uy = v.T(494, 448)
-v.box(830, 230, 140, 100, "Компьютер", ["питание платы", "по USB"])
-v.wire([(ux, uy), (900, uy), (900, 230)], "w-usb", "USB-кабель", (905, 150), "start")
+v.box(830, 230, 140, 110, "Компьютер", ["или питание", "по USB-кабелю:", "тогда белый снять"])
+v.add(f'<path class="wire w-usb dashed" d="M{ux:.1f},{uy:.1f} L900,{uy:.1f} L900,230"/>')
 figs["proshivka"] = v.render("Три провода из одного ряда разъёма ST-Link (пины 2, 4, 6) в разъём SWD на плате (пины 4, 3, 2)")
 
 # 3. USB: normal start vs updater ---------------------------------------------
@@ -705,15 +713,15 @@ body.append(f'''<section class="job" id="obzor"><h2>Обзор платы</h2>
 
 body.append(f'''<section class="job" id="proshivka"><h2>Первая прошивка через ST-Link</h2>
 <p class="lede">Нужна один раз: заливает загрузчик и прошивку вместе. Дальше обновления идут по USB.</p>
-<div class="grid">{fig("proshivka", "Зелёный, синий и фиолетовый — из ряда ST-Link без прорези (пины 2, 4, 6) в разъём SWD на плате (пины 4, 3, 2). Белый не нужен. Питание — от USB-кабеля.")}
+<div class="grid">{fig("proshivka", "Весь шлейф: зелёный, синий, фиолетовый, белый — ST-Link 2, 4, 6, 8 на плату 4, 3, 2, 1. Белый питает плату от ST-Link; если вместо него воткнут USB-кабель, белый снять.")}
 <div class="steps">
 <h3>Порядок</h3>
 <ol>
 <li>Впаяй 4-пиновую гребёнку в первые 4 отверстия <b>SWD (J13)</b>. Если там уже стоит разъём — паять не надо.</li>
-<li>Воткни USB-B в компьютер. Найди пин 1: на нём <b>3.3 В</b>. Пин 3 звонится с корпусом USB-разъёма — это земля.</li>
+<li>Питание платы — <b>один из двух вариантов</b>: белый провод от ST-Link (3.3 В, хватает для прошивки) <b>или</b> USB-кабель в разъём USB-B платы. Не оба сразу.</li>
 <li>Все три провода — в ряд ST-Link без прорези (правый столбец на наклейке). На плате порядок обратный:
-<b>зелёный</b> ST-Link 2 → J13 4, <b>синий</b> ST-Link 4 → J13 3, <b>фиолетовый</b> ST-Link 6 → J13 2.
-<b>Белый</b> никуда не надевать.</li>
+<b>зелёный</b> ST-Link 2 → J13 4, <b>синий</b> ST-Link 4 → J13 3, <b>фиолетовый</b> ST-Link 6 → J13 2,
+<b>белый</b> ST-Link 8 → J13 1 (только если нет USB-кабеля).</li>
 <li>STM32CubeProgrammer → ST-LINK, SWD → <b>Connect</b> → файл <code>midi_cv_full.hex</code> → Start Programming.</li>
 </ol>
 <h3>Что куда</h3>
@@ -721,9 +729,9 @@ body.append(f'''<section class="job" id="proshivka"><h2>Первая проши�
 <tr><td><span class="swatch" style="background:var(--w-green)"></span>зелёный</td><td>2</td><td>SWDIO</td><td>4</td></tr>
 <tr><td><span class="swatch" style="background:var(--w-blue)"></span>синий</td><td>4</td><td>GND</td><td>3</td></tr>
 <tr><td><span class="swatch" style="background:var(--w-violet)"></span>фиолетовый</td><td>6</td><td>SWCLK</td><td>2</td></tr>
-<tr><td><span class="swatch" style="background:var(--w-white);outline:1px solid var(--line)"></span>белый</td><td>—</td><td>(лёг бы на 3.3V)</td><td>—</td></tr>
+<tr><td><span class="swatch" style="background:var(--w-white);outline:1px solid var(--line)"></span>белый</td><td>8</td><td>3.3V — питание</td><td>1</td></tr>
 </table>
-<p class="note">Не уверен, какой ряд? Перепутать ряды не страшно: ничего не сгорит, просто не будет Connect — переставь три провода на соседний ряд. Проверь, что на другом конце шлейфа цвета идут в том же порядке: белый, фиолетовый, синий, зелёный.</p>
+<p class="note">Не уверен, какой ряд? Перепутать ряды не страшно: ничего не сгорит, просто не будет Connect — переставь три провода на соседний ряд. Проверь, что на другом конце шлейфа цвета идут в том же порядке: белый, фиолетовый, синий, зелёный. Белый (3.3 В) нужен, только пока нет USB-кабеля: когда подключаешь USB-B — снимай белый. При питании от ST-Link работает только процессор, аналоговая часть и светодиод не включатся — для прошивки это не нужно.</p>
 </div></div></section>''')
 
 body.append(f'''<section class="job" id="usb"><h2>USB: работа и обновление прошивки</h2>

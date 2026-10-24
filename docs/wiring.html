@@ -816,16 +816,17 @@ DIN-разъёмы и USB справа. На каждой схеме жёлты�
 <text class="pinname" x="196.0" y="220.0" text-anchor="start">6 SWCLK</text>
 <line class="wire w-violet" x1="161" y1="228" x2="270" y2="228"/>
 <rect class="hdrpin big" x="117" y="264" width="16" height="16"/>
-<rect class="hdrpin big" x="153" y="264" width="16" height="16"/>
+<rect class="hdrpin big pinused" x="153" y="264" width="16" height="16"/>
 <text class="pinname" x="86.0" y="277.0" text-anchor="end">3.3V 7</text>
-<text class="pinnum" x="196.0" y="277.0" text-anchor="start">8 3.3V</text>
+<text class="pinname" x="196.0" y="264.0" text-anchor="start">8 3.3V</text>
+<line class="wire w-white" x1="161" y1="272" x2="270" y2="272"/>
 <rect class="hdrpin big" x="117" y="308" width="16" height="16"/>
 <rect class="hdrpin big" x="153" y="308" width="16" height="16"/>
 <text class="pinname" x="86.0" y="321.0" text-anchor="end">5.0V 9</text>
 <text class="pinnum" x="196.0" y="321.0" text-anchor="start">10 5.0V</text>
 <text class="devline" x="145.0" y="362.0" text-anchor="middle">прорезь в стенке — со стороны</text>
 <text class="devline" x="145.0" y="380.0" text-anchor="middle">нечётных пинов (RST, GND, SWIM…)</text>
-<text class="warn" x="145.0" y="430.0" text-anchor="middle">3.3V, 5.0V и белый провод — не подключать</text>
+<text class="warn" x="145.0" y="430.0" text-anchor="middle">5.0V не подключать</text>
 <rect class="dev" x="115" y="442" width="60" height="40" rx="4"/>
 <text class="lblsub" x="190.0" y="468.0" text-anchor="start">в USB компьютера</text>
 <path class="wire w-green" d="M270.0,140.0 L280.0,140.0 L280.0,309.8 L415.1,309.8"/>
@@ -840,6 +841,10 @@ DIN-разъёмы и USB справа. На каждой схеме жёлты�
 <circle class="wireend w-violet" cx="270.0" cy="228.0" r="4"/>
 <circle class="wireend w-violet" cx="415.1" cy="272.0" r="4"/>
 <text class="wlabel halo" x="318.0" y="222.0" text-anchor="start">фиолетовый</text>
+<path class="wire w-white" d="M270.0,272.0 L274.0,272.0 L274.0,369.0 L438.2,369.0 L438.2,253.1 L415.1,253.1"/>
+<circle class="wireend w-white" cx="270.0" cy="272.0" r="4"/>
+<circle class="wireend w-white" cx="415.1" cy="253.1" r="4"/>
+<text class="wlabel halo" x="282.0" y="389.0" text-anchor="start">белый: 3.3 В, только без USB-кабеля</text>
 <text class="pinnum halo" x="448.7" y="258.1" text-anchor="start">1</text>
 <text class="pinnum halo" x="448.7" y="277.0" text-anchor="start">2</text>
 <text class="pinnum halo" x="448.7" y="295.9" text-anchor="start">3</text>
@@ -849,23 +854,21 @@ DIN-разъёмы и USB справа. На каждой схеме жёлты�
 <line class="leader" x1="600.0" y1="34.0" x2="415.1" y2="250.4"/>
 <circle class="leaderdot" cx="415.1" cy="250.4" r="3"/>
 <text class="lbl halo" x="606.0" y="39.0" text-anchor="start">J13, пин 1: 3.3 В при включённом USB</text>
-<rect class="dev" x="830" y="230" width="140" height="100" rx="10"/>
+<rect class="dev" x="830" y="230" width="140" height="110" rx="10"/>
 <text class="devtitle" x="844" y="256">Компьютер</text>
-<text class="devline" x="844" y="280">питание платы</text>
-<text class="devline" x="844" y="300">по USB</text>
-<path class="wire w-usb" d="M794.4,124.8 L900.0,124.8 L900.0,230.0"/>
-<circle class="wireend w-usb" cx="794.4" cy="124.8" r="4"/>
-<circle class="wireend w-usb" cx="900.0" cy="230.0" r="4"/>
-<text class="wlabel halo" x="905.0" y="150.0" text-anchor="start">USB-кабель</text>
-</svg></div><figcaption>Зелёный, синий и фиолетовый — из ряда ST-Link без прорези (пины 2, 4, 6) в разъём SWD на плате (пины 4, 3, 2). Белый не нужен. Питание — от USB-кабеля.</figcaption></figure>
+<text class="devline" x="844" y="280">или питание</text>
+<text class="devline" x="844" y="300">по USB-кабелю:</text>
+<text class="devline" x="844" y="320">тогда белый снять</text>
+<path class="wire w-usb dashed" d="M794.4,124.8 L900,124.8 L900,230"/>
+</svg></div><figcaption>Весь шлейф: зелёный, синий, фиолетовый, белый — ST-Link 2, 4, 6, 8 на плату 4, 3, 2, 1. Белый питает плату от ST-Link; если вместо него воткнут USB-кабель, белый снять.</figcaption></figure>
 <div class="steps">
 <h3>Порядок</h3>
 <ol>
 <li>Впаяй 4-пиновую гребёнку в первые 4 отверстия <b>SWD (J13)</b>. Если там уже стоит разъём — паять не надо.</li>
-<li>Воткни USB-B в компьютер. Найди пин 1: на нём <b>3.3 В</b>. Пин 3 звонится с корпусом USB-разъёма — это земля.</li>
+<li>Питание платы — <b>один из двух вариантов</b>: белый провод от ST-Link (3.3 В, хватает для прошивки) <b>или</b> USB-кабель в разъём USB-B платы. Не оба сразу.</li>
 <li>Все три провода — в ряд ST-Link без прорези (правый столбец на наклейке). На плате порядок обратный:
-<b>зелёный</b> ST-Link 2 → J13 4, <b>синий</b> ST-Link 4 → J13 3, <b>фиолетовый</b> ST-Link 6 → J13 2.
-<b>Белый</b> никуда не надевать.</li>
+<b>зелёный</b> ST-Link 2 → J13 4, <b>синий</b> ST-Link 4 → J13 3, <b>фиолетовый</b> ST-Link 6 → J13 2,
+<b>белый</b> ST-Link 8 → J13 1 (только если нет USB-кабеля).</li>
 <li>STM32CubeProgrammer → ST-LINK, SWD → <b>Connect</b> → файл <code>midi_cv_full.hex</code> → Start Programming.</li>
 </ol>
 <h3>Что куда</h3>
@@ -873,9 +876,9 @@ DIN-разъёмы и USB справа. На каждой схеме жёлты�
 <tr><td><span class="swatch" style="background:var(--w-green)"></span>зелёный</td><td>2</td><td>SWDIO</td><td>4</td></tr>
 <tr><td><span class="swatch" style="background:var(--w-blue)"></span>синий</td><td>4</td><td>GND</td><td>3</td></tr>
 <tr><td><span class="swatch" style="background:var(--w-violet)"></span>фиолетовый</td><td>6</td><td>SWCLK</td><td>2</td></tr>
-<tr><td><span class="swatch" style="background:var(--w-white);outline:1px solid var(--line)"></span>белый</td><td>—</td><td>(лёг бы на 3.3V)</td><td>—</td></tr>
+<tr><td><span class="swatch" style="background:var(--w-white);outline:1px solid var(--line)"></span>белый</td><td>8</td><td>3.3V — питание</td><td>1</td></tr>
 </table>
-<p class="note">Не уверен, какой ряд? Перепутать ряды не страшно: ничего не сгорит, просто не будет Connect — переставь три провода на соседний ряд. Проверь, что на другом конце шлейфа цвета идут в том же порядке: белый, фиолетовый, синий, зелёный.</p>
+<p class="note">Не уверен, какой ряд? Перепутать ряды не страшно: ничего не сгорит, просто не будет Connect — переставь три провода на соседний ряд. Проверь, что на другом конце шлейфа цвета идут в том же порядке: белый, фиолетовый, синий, зелёный. Белый (3.3 В) нужен, только пока нет USB-кабеля: когда подключаешь USB-B — снимай белый. При питании от ST-Link работает только процессор, аналоговая часть и светодиод не включатся — для прошивки это не нужно.</p>
 </div></div></section><section class="job" id="usb"><h2>USB: работа и обновление прошивки</h2>
 <p class="lede">Один и тот же кабель. Разница только в том, держишь ли ты LEARN в момент подключения.</p>
 <div class="pair"><figure><div class="scroll"><svg viewBox="0 0 560 470" role="img" aria-label="Обычное включение" class="diagram">
