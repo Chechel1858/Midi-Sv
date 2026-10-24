@@ -1,0 +1,2454 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Подключение MIDI Analog Filter</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500;600&family=Unbounded:wght@600&display=swap">
+<style>
+/* Layout: a fitter's sheet — sticky chip nav, then one section per job: diagram first, steps beside it */
+:root {
+  --bg: #f3f5f2; --fg: #17201b; --muted: #56635b; --line: #c9d2cb; --card: #ffffff;
+  --accent: #e8a317; --accent-soft: #e8a31733;
+  --pcb: #24452f; --pcb-edge: #17301f; --silk: #e8efe6; --plastic: #f1efe7; --black-part: #161a18;
+  --metal: #c3c9cc; --pad: #d8d2bf; --stlink: #3f9a5e33;
+  --w-blue: #2f6fdb; --w-amber: #d48806; --w-red: #d23f3f; --w-teal: #128a78; --w-violet: #7a52c7;
+  --w-usb: #56635b; --w-midi: #2f6fdb; --w-audio: #128a78; --w-pot: #7a52c7;
+  --z1: #2f6fdb; --z2: #128a78; --z3: #7a52c7; --z4: #d23f3f;
+  --f-display: "Unbounded", "Golos Text", system-ui, sans-serif;
+  --f-body: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111613; --fg: #e4ebe5; --muted: #9aa89f; --line: #2c3730; --card: #1a211c;
+  --accent: #f2b33a; --accent-soft: #f2b33a33; --pcb: #29513a; --pcb-edge: #3b6a4d; --stlink: #3f9a5e44;
+  --w-blue: #6b9bf0; --w-amber: #f0a92a; --w-red: #ef6b6b; --w-teal: #3cc4ac; --w-violet: #a98af0;
+  --w-usb: #9aa89f; --w-midi: #6b9bf0; --w-audio: #3cc4ac; --w-pot: #a98af0;
+  --z1: #6b9bf0; --z2: #3cc4ac; --z3: #a98af0; --z4: #ef6b6b; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #111613; --fg: #e4ebe5; --muted: #9aa89f; --line: #2c3730; --card: #1a211c;
+  --accent: #f2b33a; --accent-soft: #f2b33a33; --pcb: #29513a; --pcb-edge: #3b6a4d; --stlink: #3f9a5e44;
+  --w-blue: #6b9bf0; --w-amber: #f0a92a; --w-red: #ef6b6b; --w-teal: #3cc4ac; --w-violet: #a98af0;
+  --w-usb: #9aa89f; --w-midi: #6b9bf0; --w-audio: #3cc4ac; --w-pot: #a98af0;
+  --z1: #6b9bf0; --z2: #3cc4ac; --z3: #a98af0; --z4: #ef6b6b; color-scheme: dark; }
+
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.55 var(--f-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 64px; }
+header.top h1 { font: 600 clamp(24px, 4vw, 36px)/1.15 var(--f-display); margin: 0 0 10px; text-wrap: balance; letter-spacing: -0.01em; }
+header.top p { margin: 0; color: var(--muted); max-width: 68ch; }
+nav.chips { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
+  display: flex; flex-wrap: wrap; gap: 8px; padding-block: 14px; margin-top: 18px; border-bottom: 1px solid var(--line); }
+nav.chips a { font: 500 13px/1 var(--f-body); color: var(--fg); text-decoration: none; padding: 8px 12px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--card); }
+nav.chips a:hover, nav.chips a:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+section.job { padding-block: 40px 8px; border-bottom: 1px solid var(--line); scroll-margin-top: 70px; }
+section.job h2 { font: 600 22px/1.2 var(--f-display); margin: 0 0 6px; text-wrap: balance; }
+section.job .lede { color: var(--muted); margin: 0 0 18px; max-width: 70ch; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 340px); gap: 28px; align-items: start; }
+.grid.wide { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+@media (max-width: 860px) { .pair { grid-template-columns: minmax(0, 1fr); } }
+figure { margin: 0; min-width: 0; }
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; }
+.steps { min-width: 0; }
+.steps ol, .steps ul { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
+.steps h3 { font: 600 12px/1 var(--f-body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 18px 0 10px; }
+.steps h3:first-child { margin-top: 0; }
+code, .mono { font-family: var(--f-mono); font-size: .9em; }
+code { background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; }
+table.pins { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+table.pins td, table.pins th { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; }
+table.pins th { font-weight: 600; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+.note { border-left: 3px solid var(--w-red); padding: 8px 12px; background: var(--card); border-radius: 0 8px 8px 0; font-size: 14px; }
+.swatch { display: inline-block; width: 22px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+
+/* ---- SVG ---- */
+svg.diagram { display: block; width: 100%; min-width: 560px; height: auto; font-family: var(--f-body); }
+.pcb { fill: var(--pcb); stroke: var(--pcb-edge); stroke-width: 2; }
+.hole { fill: var(--bg); stroke: var(--pad); stroke-width: 2; }
+.silk { fill: var(--silk); font: 600 11px var(--f-mono); letter-spacing: .04em; }
+.silk.tiny { font-size: 8.5px; }
+.silkline, .silkbox { stroke: var(--silk); stroke-width: 1.5; fill: none; opacity: .7; }
+.cap { fill: #2a2d2c; stroke: var(--silk); stroke-width: 1; }
+.trimmer { fill: var(--plastic); stroke: #0004; }
+.trimknob { fill: #d9d6cc; stroke: #0005; }
+.smd { fill: #3a3f3c; }
+.ic, .mcu { fill: var(--black-part); }
+.mcupin { stroke: var(--metal); stroke-width: 1.5; }
+.jst { fill: var(--plastic); stroke: #0004; }
+.jstpin { fill: #bdb7a6; }
+.pad { fill: var(--pad); stroke: #0003; }
+.hdr { fill: var(--black-part); }
+.hdrpin { fill: #e3b341; }
+.hdrpin.big { stroke: #0005; }
+.metal { fill: var(--metal); stroke: #0004; }
+.metalin { fill: #8d9599; }
+.din { fill: var(--black-part); }
+.dinhole { fill: #2b302d; stroke: #4b524d; }
+.dinpin { fill: #9aa19c; }
+.sc { fill: var(--pad); opacity: .85; }
+.led { fill: #f5f5ef; stroke: #0004; }
+.button { fill: #2a2d2c; }
+.buttoncap { fill: #efefe9; }
+.protohole { fill: none; stroke: var(--pad); stroke-width: 1.4; opacity: .8; }
+.powerzone { fill: none; stroke: none; }
+.hl { stroke: var(--accent); stroke-width: 3.5; paint-order: stroke; }
+.powerzone.hl { stroke-dasharray: 6 4; stroke-width: 2.5; }
+.cropframe { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 5 5; }
+
+.lbl { fill: var(--fg); font-size: 15px; font-weight: 500; }
+.lblsub { fill: var(--muted); font-size: 13px; }
+.halo { paint-order: stroke; stroke: var(--card); stroke-width: 5px; stroke-linejoin: round; }
+.leader { stroke: var(--muted); stroke-width: 1.2; }
+.leaderdot { fill: var(--accent); }
+.wire { fill: none; stroke-width: 3.5; stroke-linejoin: round; stroke-linecap: round; }
+.wire.dashed { stroke-dasharray: 6 5; }
+.wireend { stroke: none; }
+.wlabel { fill: var(--fg); font-size: 13px; font-weight: 600; }
+.w-blue { stroke: var(--w-blue); } .wireend.w-blue { fill: var(--w-blue); }
+.w-amber { stroke: var(--w-amber); } .wireend.w-amber { fill: var(--w-amber); }
+.w-red { stroke: var(--w-red); }
+.w-gnd { stroke: var(--fg); } .wireend.w-gnd { fill: var(--fg); }
+.w-usb { stroke: var(--w-usb); } .wireend.w-usb { fill: var(--w-usb); }
+.w-midi { stroke: var(--w-midi); } .wireend.w-midi { fill: var(--w-midi); }
+.w-thru { stroke: var(--w-violet); } .wireend.w-thru { fill: var(--w-violet); }
+.w-cv { stroke: var(--w-amber); } .wireend.w-cv { fill: var(--w-amber); }
+.w-gate { stroke: var(--w-teal); } .wireend.w-gate { fill: var(--w-teal); }
+.w-clock { stroke: var(--w-violet); } .wireend.w-clock { fill: var(--w-violet); }
+.w-audio { stroke: var(--w-audio); } .wireend.w-audio { fill: var(--w-audio); }
+.w-pot { stroke: var(--w-pot); } .wireend.w-pot { fill: var(--w-pot); }
+.wireend { stroke: none; }
+.dev { fill: var(--card); stroke: var(--fg); stroke-width: 1.5; }
+.stlink { fill: var(--stlink); stroke: var(--fg); stroke-width: 1.5; }
+.devtitle { fill: var(--fg); font-size: 15px; font-weight: 600; }
+.devline { fill: var(--muted); font-size: 13px; }
+.pinname { fill: var(--fg); font: 600 13px var(--f-mono); }
+.pinnum { fill: var(--muted); font: 600 12px var(--f-mono); }
+.warn { fill: var(--w-red); font-size: 13px; font-weight: 600; }
+.paneltitle { fill: var(--fg); font: 600 17px var(--f-display); }
+.press { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 3; }
+.key { fill: var(--card); stroke: var(--fg); stroke-width: 1; }
+.keyb { fill: var(--fg); }
+.jack { fill: var(--card); stroke: var(--fg); stroke-width: 2; }
+.jackin { fill: var(--fg); }
+.pot { fill: var(--card); stroke: var(--fg); stroke-width: 2; }
+.potline { stroke: var(--fg); stroke-width: 2.5; stroke-linecap: round; }
+.arrowhead { fill: var(--fg); }
+.axis { stroke: var(--fg); stroke-width: 1.5; }
+.axis.faint { stroke: var(--line); }
+.tick { stroke: var(--fg); stroke-width: 1.2; }
+.ticklbl { fill: var(--muted); font: 500 12px var(--f-mono); }
+.zone { opacity: .9; } .zone.z1 { fill: var(--z1); } .zone.z2 { fill: var(--z2); } .zone.z3 { fill: var(--z3); } .zone.z4 { fill: var(--z4); }
+.zonemark { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 3; }
+.ledon { fill: var(--accent); }
+@media (prefers-reduced-motion: no-preference) { nav.chips a { transition: border-color .15s, box-shadow .15s; } }
+</style>
+</head><body>
+<div class="wrap">
+<header class="top">
+<h1>Плата MIDI Analog Filter: куда что подключать</h1>
+<p>Схемы нарисованы по фото платы, в той же ориентации: фильтр сверху, MIDI и процессор снизу,
+DIN-разъёмы и USB справа. На каждой схеме жёлтым подсвечено только то, что нужно для этого шага.
+Подробности и команды — в README репозитория.</p>
+</header><nav class="chips" aria-label="Схемы"><a href="#obzor">Обзор платы</a><a href="#proshivka">Первая прошивка</a><a href="#usb">USB и обновление</a><a href="#midi">MIDI</a><a href="#vyhody">CV, GATE, CLOCK</a><a href="#filtr">Фильтр и аудио</a><a href="#learn">Кнопка и светодиод</a><a href="#uart">Запасная консоль</a></nav><section class="job" id="obzor"><h2>Обзор платы</h2>
+<p class="lede">Три зоны: сверху аналоговый фильтр (стерео, L и R), посередине питание (из USB делаются ±15 В),
+снизу MIDI, процессор STM32F446 и выходы управляющих напряжений.</p>
+<div class="grid wide"><figure><div class="scroll"><svg viewBox="0 0 1000 880" role="img" aria-label="Вид сверху на плату: где какие разъёмы, площадки и кнопка" class="diagram">
+<defs><clipPath id="clip-obzor"><rect x="250" y="25" width="530.0" height="830.0" rx="12"/></clipPath>
+<marker id="arr-obzor" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<g clip-path="url(#clip-obzor)"><g transform="translate(250.0 25.0) scale(1.0)">
+<rect class="pcb" x="0" y="0" width="470" height="825" rx="10"/>
+<circle class="hole" cx="14" cy="14" r="6"/>
+<circle class="hole" cx="456" cy="14" r="6"/>
+<circle class="hole" cx="14" cy="811" r="6"/>
+<circle class="hole" cx="456" cy="811" r="6"/>
+<line class="silkline" x1="8" y1="350" x2="462" y2="350"/>
+<text class="silk" x="150" y="342">MIDI ANALOG FILTER</text>
+<text class="silk" x="330" y="342">PRIBORE PROTOTYPE</text>
+<circle class="cap" cx="112" cy="98" r="27"/>
+<text class="silk tiny" x="112" y="102" text-anchor="middle">220µ</text>
+<circle class="cap" cx="112" cy="300" r="27"/>
+<text class="silk tiny" x="112" y="304" text-anchor="middle">220µ</text>
+<rect class="trimmer" x="142" y="66" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="153" cy="77" r="6"/>
+<rect class="trimmer" x="142" y="272" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="153" cy="283" r="6"/>
+<rect class="trimmer" x="186" y="196" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="197" cy="207" r="6"/>
+<rect class="smd" x="172" y="34" width="16" height="10"/>
+<rect class="ic" x="172" y="52" width="14" height="14"/>
+<rect class="smd" x="198" y="34" width="16" height="10"/>
+<rect class="ic" x="198" y="52" width="14" height="14"/>
+<rect class="smd" x="224" y="34" width="16" height="10"/>
+<rect class="ic" x="224" y="52" width="14" height="14"/>
+<rect class="smd" x="250" y="34" width="16" height="10"/>
+<rect class="ic" x="250" y="52" width="14" height="14"/>
+<rect class="smd" x="276" y="34" width="16" height="10"/>
+<rect class="ic" x="276" y="52" width="14" height="14"/>
+<rect class="smd" x="172" y="242" width="16" height="10"/>
+<rect class="ic" x="172" y="260" width="14" height="14"/>
+<rect class="smd" x="198" y="242" width="16" height="10"/>
+<rect class="ic" x="198" y="260" width="14" height="14"/>
+<rect class="smd" x="224" y="242" width="16" height="10"/>
+<rect class="ic" x="224" y="260" width="14" height="14"/>
+<rect class="smd" x="250" y="242" width="16" height="10"/>
+<rect class="ic" x="250" y="260" width="14" height="14"/>
+<rect class="smd" x="276" y="242" width="16" height="10"/>
+<rect class="ic" x="276" y="260" width="14" height="14"/>
+<rect class="ic" x="62" y="152" width="30" height="22"/>
+<rect class="ic" x="384" y="152" width="30" height="22"/>
+<rect class="jst hl" x="5" y="102" width="38" height="46" rx="3"/>
+<rect class="jstpin" x="21.0" y="110.5" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="122.0" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="133.5" width="6" height="6"/>
+<rect class="jst hl" x="5" y="150" width="38" height="46" rx="3"/>
+<rect class="jstpin" x="21.0" y="158.5" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="170.0" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="181.5" width="6" height="6"/>
+<text class="silk" x="50" y="128">L IN</text>
+<text class="silk" x="50" y="176">R IN</text>
+<circle class="pad" cx="100" cy="58" r="5.5"/>
+<text class="silk tiny" x="60" y="48">RES_L CV IN</text>
+<circle class="pad" cx="100" cy="266" r="5.5"/>
+<text class="silk tiny" x="60" y="256">RES_R CV IN</text>
+<rect class="jst hl" x="241" y="121" width="44" height="62" rx="3"/>
+<rect class="jstpin" x="260.0" y="133.5" width="6" height="6"/>
+<rect class="jstpin" x="260.0" y="149.0" width="6" height="6"/>
+<rect class="jstpin" x="260.0" y="164.5" width="6" height="6"/>
+<text class="silk" x="290" y="158">FILTER</text>
+<circle class="pad hl" cx="205" cy="166" r="5.5"/>
+<text class="silk tiny" x="166" y="150">FILTER CV IN</text>
+<rect class="jst hl" x="373" y="50" width="42" height="64" rx="3"/>
+<rect class="jstpin" x="391.0" y="63.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="79.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="95.0" width="6" height="6"/>
+<text class="silk tiny" x="372" y="44">RES L</text>
+<rect class="jst hl" x="373" y="258" width="42" height="60" rx="3"/>
+<rect class="jstpin" x="391.0" y="270.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="285.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="300.0" width="6" height="6"/>
+<text class="silk tiny" x="372" y="252">RES R</text>
+<rect class="jst hl" x="428" y="132" width="40" height="42" rx="3"/>
+<rect class="jstpin" x="445.0" y="139.5" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="150.0" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="160.5" width="6" height="6"/>
+<rect class="jst hl" x="428" y="176" width="40" height="42" rx="3"/>
+<rect class="jstpin" x="445.0" y="183.5" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="194.0" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="204.5" width="6" height="6"/>
+<text class="silk tiny" x="423" y="157" text-anchor="end">L OUT</text>
+<text class="silk tiny" x="423" y="201" text-anchor="end">R OUT</text>
+<rect class="ic" x="96" y="362" width="30" height="22"/>
+<rect class="ic" x="96" y="416" width="30" height="22"/>
+<rect class="ic" x="196" y="372" width="30" height="22"/>
+<rect class="ic" x="196" y="418" width="30" height="22"/>
+<rect class="ic" x="262" y="362" width="30" height="22"/>
+<rect class="ic" x="262" y="410" width="30" height="22"/>
+<rect class="ic" x="146" y="372" width="28" height="20"/>
+<rect class="ic" x="146" y="418" width="28" height="20"/>
+<rect class="powerzone hl" x="88" y="356" width="236" height="96" rx="6"/>
+<text class="silk tiny" x="206" y="402" text-anchor="middle" opacity=".75">питание ±15 В</text>
+<circle class="pad" cx="351" cy="421" r="5.5"/>
+<text class="silk tiny" x="336" y="412">+VBUS</text>
+<rect class="sc" x="58" y="434" width="30" height="30" rx="3"/>
+<rect class="sc" x="254" y="468" width="28" height="28" rx="3"/>
+<rect class="metal hl" x="408" y="418" width="86" height="60" rx="4"/>
+<rect class="metalin" x="420" y="428" width="56" height="40" rx="3"/>
+<rect class="silkbox" x="20" y="498" width="124" height="118" rx="4"/>
+<text class="silk" x="26" y="514">FILTER CV</text>
+<rect class="ic" x="92" y="526" width="26" height="34"/>
+<circle class="pad" cx="64" cy="528" r="5.5"/>
+<text class="silk tiny" x="40" y="532">J2</text>
+<circle class="pad hl" cx="64" cy="563" r="5.5"/>
+<text class="silk" x="56" y="596">CV</text>
+<circle class="pad hl" cx="156" cy="489" r="5.5"/>
+<text class="silk" x="166" y="494">GATE</text>
+<rect class="smd" x="174" y="502" width="12" height="9"/>
+<rect class="hdr hl" x="306" y="506" width="24" height="44" rx="2"/>
+<rect class="hdrpin" x="314" y="511" width="8" height="8"/>
+<rect class="hdrpin" x="314" y="525" width="8" height="8"/>
+<rect class="hdrpin" x="314" y="539" width="8" height="8"/>
+<text class="silk" x="338" y="520">USART1</text>
+<rect class="led hl" x="406" y="512" width="16" height="10" rx="2"/>
+<text class="silk tiny" x="428" y="521">NOTEON</text>
+<rect class="din hl" x="385" y="550" width="132" height="112" rx="6"/>
+<circle class="dinhole" cx="443" cy="606" r="38"/>
+<circle class="dinpin" cx="419" cy="606" r="3"/>
+<circle class="dinpin" cx="426" cy="589" r="3"/>
+<circle class="dinpin" cx="443" cy="582" r="3"/>
+<circle class="dinpin" cx="426" cy="623" r="3"/>
+<circle class="dinpin" cx="443" cy="630" r="3"/>
+<text class="silk" x="483" y="610" text-anchor="middle">THRU</text>
+<rect class="din hl" x="385" y="664" width="132" height="112" rx="6"/>
+<circle class="dinhole" cx="443" cy="720" r="38"/>
+<circle class="dinpin" cx="419" cy="720" r="3"/>
+<circle class="dinpin" cx="426" cy="703" r="3"/>
+<circle class="dinpin" cx="443" cy="696" r="3"/>
+<circle class="dinpin" cx="426" cy="737" r="3"/>
+<circle class="dinpin" cx="443" cy="744" r="3"/>
+<text class="silk" x="483" y="724" text-anchor="middle">IN</text>
+<rect class="hdr hl" x="201" y="534" width="24" height="86" rx="2"/>
+<rect class="hdrpin" x="209" y="539" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="553" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="567" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="581" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="595" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="609" width="8" height="8"/>
+<text class="silk" x="178" y="560" transform="rotate(-90 178 560)" text-anchor="end">SWD</text>
+<rect class="mcu" x="276" y="584" width="56" height="56" rx="2"/>
+<line class="mcupin" x1="270" y1="590" x2="276" y2="590"/>
+<line class="mcupin" x1="332" y1="590" x2="338" y2="590"/>
+<line class="mcupin" x1="282" y1="578" x2="282" y2="584"/>
+<line class="mcupin" x1="282" y1="640" x2="282" y2="646"/>
+<line class="mcupin" x1="270" y1="596" x2="276" y2="596"/>
+<line class="mcupin" x1="332" y1="596" x2="338" y2="596"/>
+<line class="mcupin" x1="288" y1="578" x2="288" y2="584"/>
+<line class="mcupin" x1="288" y1="640" x2="288" y2="646"/>
+<line class="mcupin" x1="270" y1="602" x2="276" y2="602"/>
+<line class="mcupin" x1="332" y1="602" x2="338" y2="602"/>
+<line class="mcupin" x1="294" y1="578" x2="294" y2="584"/>
+<line class="mcupin" x1="294" y1="640" x2="294" y2="646"/>
+<line class="mcupin" x1="270" y1="608" x2="276" y2="608"/>
+<line class="mcupin" x1="332" y1="608" x2="338" y2="608"/>
+<line class="mcupin" x1="300" y1="578" x2="300" y2="584"/>
+<line class="mcupin" x1="300" y1="640" x2="300" y2="646"/>
+<line class="mcupin" x1="270" y1="614" x2="276" y2="614"/>
+<line class="mcupin" x1="332" y1="614" x2="338" y2="614"/>
+<line class="mcupin" x1="306" y1="578" x2="306" y2="584"/>
+<line class="mcupin" x1="306" y1="640" x2="306" y2="646"/>
+<line class="mcupin" x1="270" y1="620" x2="276" y2="620"/>
+<line class="mcupin" x1="332" y1="620" x2="338" y2="620"/>
+<line class="mcupin" x1="312" y1="578" x2="312" y2="584"/>
+<line class="mcupin" x1="312" y1="640" x2="312" y2="646"/>
+<line class="mcupin" x1="270" y1="626" x2="276" y2="626"/>
+<line class="mcupin" x1="332" y1="626" x2="338" y2="626"/>
+<line class="mcupin" x1="318" y1="578" x2="318" y2="584"/>
+<line class="mcupin" x1="318" y1="640" x2="318" y2="646"/>
+<line class="mcupin" x1="270" y1="632" x2="276" y2="632"/>
+<line class="mcupin" x1="332" y1="632" x2="338" y2="632"/>
+<line class="mcupin" x1="324" y1="578" x2="324" y2="584"/>
+<line class="mcupin" x1="324" y1="640" x2="324" y2="646"/>
+<text class="silk tiny" x="304" y="616" text-anchor="middle">STM32</text>
+<text class="silk tiny" x="304" y="628" text-anchor="middle">F446</text>
+<rect class="smd" x="280" y="664" width="14" height="10"/>
+<circle class="pad" cx="205" cy="624" r="4.5"/>
+<circle class="pad" cx="207" cy="637" r="4.5"/>
+<circle class="pad" cx="210" cy="650" r="4.5"/>
+<circle class="pad" cx="214" cy="663" r="4.5"/>
+<circle class="pad" cx="219" cy="676" r="4.5"/>
+<circle class="pad" cx="226" cy="689" r="4.5"/>
+<circle class="pad hl" cx="233" cy="702" r="4.5"/>
+<text class="silk tiny" x="244" y="706">J31</text>
+<rect class="button hl" x="240" y="720" width="40" height="32" rx="3"/>
+<circle class="buttoncap" cx="260" cy="736" r="9"/>
+<text class="silk" x="260" y="772" text-anchor="middle">LEARN</text>
+<rect class="ic" x="340" y="724" width="22" height="16"/>
+<rect class="ic" x="340" y="752" width="22" height="16"/>
+<rect class="ic" x="368" y="772" width="22" height="16"/>
+<circle class="protohole" cx="26" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="40" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="54" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="68" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="82" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="96" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="110" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="124" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="138" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="152" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="166" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="180" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="26" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="40" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="54" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="68" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="82" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="96" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="110" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="124" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="138" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="152" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="166" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="180" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="26" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="40" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="54" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="68" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="82" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="96" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="110" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="124" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="138" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="152" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="166" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="180" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="26" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="40" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="54" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="68" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="82" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="96" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="110" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="124" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="138" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="152" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="166" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="180" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="26" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="40" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="54" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="68" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="82" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="96" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="110" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="124" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="138" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="152" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="166" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="180" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="26" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="40" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="54" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="68" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="82" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="96" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="110" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="124" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="138" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="152" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="166" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="180" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="26" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="40" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="54" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="68" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="82" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="96" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="110" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="124" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="138" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="152" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="166" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="180" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="26" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="40" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="54" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="68" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="82" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="96" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="110" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="124" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="138" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="152" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="166" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="180" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="26" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="40" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="54" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="68" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="82" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="96" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="110" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="124" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="138" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="152" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="166" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="180" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="26" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="40" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="54" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="68" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="82" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="96" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="110" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="124" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="138" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="152" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="166" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="180" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="26" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="40" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="54" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="68" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="82" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="96" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="110" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="124" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="138" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="152" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="166" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="180" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="26" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="40" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="54" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="68" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="82" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="96" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="110" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="124" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="138" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="152" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="166" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="180" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="26" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="40" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="54" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="68" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="82" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="96" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="110" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="124" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="138" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="152" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="166" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="180" cy="794.0" r="3.2"/>
+</g></g>
+<line class="leader" x1="240.0" y1="85.0" x2="350.0" y2="83.0"/>
+<circle class="leaderdot" cx="350.0" cy="83.0" r="3"/>
+<text class="lbl halo" x="234.0" y="90.0" text-anchor="end">RES_L CV IN</text>
+<text class="lblsub halo" x="234.0" y="107.0" text-anchor="end">площадка, CV резонанса L</text>
+<line class="leader" x1="240.0" y1="150.0" x2="274.0" y2="150.0"/>
+<circle class="leaderdot" cx="274.0" cy="150.0" r="3"/>
+<text class="lbl halo" x="234.0" y="155.0" text-anchor="end">Аудио вход L</text>
+<text class="lblsub halo" x="234.0" y="172.0" text-anchor="end">белый разъём J6</text>
+<line class="leader" x1="240.0" y1="210.0" x2="274.0" y2="198.0"/>
+<circle class="leaderdot" cx="274.0" cy="198.0" r="3"/>
+<text class="lbl halo" x="234.0" y="215.0" text-anchor="end">Аудио вход R</text>
+<text class="lblsub halo" x="234.0" y="232.0" text-anchor="end">белый разъём J12</text>
+<line class="leader" x1="240.0" y1="265.0" x2="455.0" y2="191.0"/>
+<circle class="leaderdot" cx="455.0" cy="191.0" r="3"/>
+<text class="lbl halo" x="234.0" y="270.0" text-anchor="end">FILTER CV IN (J7)</text>
+<text class="lblsub halo" x="234.0" y="287.0" text-anchor="end">внешний CV на срез</text>
+<line class="leader" x1="240.0" y1="320.0" x2="350.0" y2="291.0"/>
+<circle class="leaderdot" cx="350.0" cy="291.0" r="3"/>
+<text class="lbl halo" x="234.0" y="325.0" text-anchor="end">RES_R CV IN</text>
+<text class="lblsub halo" x="234.0" y="342.0" text-anchor="end">площадка, CV резонанса R</text>
+<line class="leader" x1="240.0" y1="425.0" x2="346.0" y2="429.0"/>
+<circle class="leaderdot" cx="346.0" cy="429.0" r="3"/>
+<text class="lbl halo" x="234.0" y="430.0" text-anchor="end">Питание ±15 В</text>
+<text class="lblsub halo" x="234.0" y="447.0" text-anchor="end">делается из USB, само</text>
+<line class="leader" x1="240.0" y1="515.0" x2="406.0" y2="514.0"/>
+<circle class="leaderdot" cx="406.0" cy="514.0" r="3"/>
+<text class="lbl halo" x="234.0" y="520.0" text-anchor="end">GATE (J14)</text>
+<text class="lblsub halo" x="234.0" y="537.0" text-anchor="end">площадка, 0 / 5 В</text>
+<line class="leader" x1="240.0" y1="588.0" x2="314.0" y2="588.0"/>
+<circle class="leaderdot" cx="314.0" cy="588.0" r="3"/>
+<text class="lbl halo" x="234.0" y="593.0" text-anchor="end">CV (J1)</text>
+<text class="lblsub halo" x="234.0" y="610.0" text-anchor="end">площадка, 0…10 В</text>
+<line class="leader" x1="240.0" y1="665.0" x2="463.0" y2="600.0"/>
+<circle class="leaderdot" cx="463.0" cy="600.0" r="3"/>
+<text class="lbl halo" x="234.0" y="670.0" text-anchor="end">SWD (J13)</text>
+<text class="lblsub halo" x="234.0" y="687.0" text-anchor="end">сюда ST-Link</text>
+<line class="leader" x1="240.0" y1="715.0" x2="483.0" y2="727.0"/>
+<circle class="leaderdot" cx="483.0" cy="727.0" r="3"/>
+<text class="lbl halo" x="234.0" y="720.0" text-anchor="end">CLOCK (J31)</text>
+<text class="lblsub halo" x="234.0" y="737.0" text-anchor="end">площадка, такт</text>
+<line class="leader" x1="240.0" y1="770.0" x2="490.0" y2="761.0"/>
+<circle class="leaderdot" cx="490.0" cy="761.0" r="3"/>
+<text class="lbl halo" x="234.0" y="775.0" text-anchor="end">Кнопка LEARN</text>
+<line class="leader" x1="240.0" y1="825.0" x2="360.0" y2="815.0"/>
+<circle class="leaderdot" cx="360.0" cy="815.0" r="3"/>
+<text class="lbl halo" x="234.0" y="830.0" text-anchor="end">Макетное поле</text>
+<text class="lblsub halo" x="234.0" y="847.0" text-anchor="end">для своих доработок</text>
+<line class="leader" x1="790.0" y1="75.0" x2="644.0" y2="107.0"/>
+<circle class="leaderdot" cx="644.0" cy="107.0" r="3"/>
+<text class="lbl halo" x="796.0" y="80.0" text-anchor="start">RES L</text>
+<text class="lblsub halo" x="796.0" y="97.0" text-anchor="start">потенциометр резонанса L</text>
+<line class="leader" x1="790.0" y1="125.0" x2="513.0" y2="177.0"/>
+<circle class="leaderdot" cx="513.0" cy="177.0" r="3"/>
+<text class="lbl halo" x="796.0" y="130.0" text-anchor="start">FILTER</text>
+<text class="lblsub halo" x="796.0" y="147.0" text-anchor="start">потенциометр частоты среза</text>
+<line class="leader" x1="790.0" y1="175.0" x2="698.0" y2="178.0"/>
+<circle class="leaderdot" cx="698.0" cy="178.0" r="3"/>
+<text class="lbl halo" x="796.0" y="180.0" text-anchor="start">Аудио выход L</text>
+<text class="lblsub halo" x="796.0" y="197.0" text-anchor="start">разъём J4</text>
+<line class="leader" x1="790.0" y1="230.0" x2="698.0" y2="222.0"/>
+<circle class="leaderdot" cx="698.0" cy="222.0" r="3"/>
+<text class="lbl halo" x="796.0" y="235.0" text-anchor="start">Аудио выход R</text>
+<text class="lblsub halo" x="796.0" y="252.0" text-anchor="start">разъём J10</text>
+<line class="leader" x1="790.0" y1="315.0" x2="644.0" y2="313.0"/>
+<circle class="leaderdot" cx="644.0" cy="313.0" r="3"/>
+<text class="lbl halo" x="796.0" y="320.0" text-anchor="start">RES R</text>
+<text class="lblsub halo" x="796.0" y="337.0" text-anchor="start">потенциометр резонанса R</text>
+<line class="leader" x1="790.0" y1="450.0" x2="744.0" y2="473.0"/>
+<circle class="leaderdot" cx="744.0" cy="473.0" r="3"/>
+<text class="lbl halo" x="796.0" y="455.0" text-anchor="start">USB-B</text>
+<text class="lblsub halo" x="796.0" y="472.0" text-anchor="start">питание + MIDI + COM-порт</text>
+<line class="leader" x1="790.0" y1="505.0" x2="664.0" y2="542.0"/>
+<circle class="leaderdot" cx="664.0" cy="542.0" r="3"/>
+<text class="lbl halo" x="796.0" y="510.0" text-anchor="start">Светодиод NOTEON</text>
+<line class="leader" x1="790.0" y1="560.0" x2="580.0" y2="554.0"/>
+<circle class="leaderdot" cx="580.0" cy="554.0" r="3"/>
+<text class="lbl halo" x="796.0" y="565.0" text-anchor="start">USART1 (J22)</text>
+<text class="lblsub halo" x="796.0" y="582.0" text-anchor="start">запасная консоль</text>
+<line class="leader" x1="790.0" y1="640.0" x2="767.0" y2="631.0"/>
+<circle class="leaderdot" cx="767.0" cy="631.0" r="3"/>
+<text class="lbl halo" x="796.0" y="645.0" text-anchor="start">MIDI THRU</text>
+<text class="lblsub halo" x="796.0" y="662.0" text-anchor="start">верхний DIN</text>
+<line class="leader" x1="790.0" y1="760.0" x2="767.0" y2="745.0"/>
+<circle class="leaderdot" cx="767.0" cy="745.0" r="3"/>
+<text class="lbl halo" x="796.0" y="765.0" text-anchor="start">MIDI IN</text>
+<text class="lblsub halo" x="796.0" y="782.0" text-anchor="start">нижний DIN</text>
+</svg></div><figcaption>Все разъёмы, площадки и кнопка. CV, GATE и CLOCK на этой плате — круглые площадки под пайку, а не гнёзда.</figcaption></figure></div>
+</section><section class="job" id="proshivka"><h2>Первая прошивка через ST-Link</h2>
+<p class="lede">Нужна один раз: заливает загрузчик и прошивку вместе. Дальше обновления идут по USB.</p>
+<div class="grid"><figure><div class="scroll"><svg viewBox="0 0 980 480" role="img" aria-label="ST-Link подключается к разъёму SWD (J13) тремя проводами, плата питается от USB" class="diagram">
+<defs><clipPath id="clip-proshivka"><rect x="300" y="40" width="507.5" height="406.0" rx="12"/></clipPath>
+<marker id="arr-proshivka" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<g clip-path="url(#clip-proshivka)"><g transform="translate(82.5 -540.0) scale(1.45)">
+<rect class="pcb" x="0" y="0" width="470" height="825" rx="10"/>
+<circle class="hole" cx="14" cy="14" r="6"/>
+<circle class="hole" cx="456" cy="14" r="6"/>
+<circle class="hole" cx="14" cy="811" r="6"/>
+<circle class="hole" cx="456" cy="811" r="6"/>
+<line class="silkline" x1="8" y1="350" x2="462" y2="350"/>
+<text class="silk" x="150" y="342">MIDI ANALOG FILTER</text>
+<text class="silk" x="330" y="342">PRIBORE PROTOTYPE</text>
+<circle class="cap" cx="112" cy="98" r="27"/>
+<text class="silk tiny" x="112" y="102" text-anchor="middle">220µ</text>
+<circle class="cap" cx="112" cy="300" r="27"/>
+<text class="silk tiny" x="112" y="304" text-anchor="middle">220µ</text>
+<rect class="trimmer" x="142" y="66" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="153" cy="77" r="6"/>
+<rect class="trimmer" x="142" y="272" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="153" cy="283" r="6"/>
+<rect class="trimmer" x="186" y="196" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="197" cy="207" r="6"/>
+<rect class="smd" x="172" y="34" width="16" height="10"/>
+<rect class="ic" x="172" y="52" width="14" height="14"/>
+<rect class="smd" x="198" y="34" width="16" height="10"/>
+<rect class="ic" x="198" y="52" width="14" height="14"/>
+<rect class="smd" x="224" y="34" width="16" height="10"/>
+<rect class="ic" x="224" y="52" width="14" height="14"/>
+<rect class="smd" x="250" y="34" width="16" height="10"/>
+<rect class="ic" x="250" y="52" width="14" height="14"/>
+<rect class="smd" x="276" y="34" width="16" height="10"/>
+<rect class="ic" x="276" y="52" width="14" height="14"/>
+<rect class="smd" x="172" y="242" width="16" height="10"/>
+<rect class="ic" x="172" y="260" width="14" height="14"/>
+<rect class="smd" x="198" y="242" width="16" height="10"/>
+<rect class="ic" x="198" y="260" width="14" height="14"/>
+<rect class="smd" x="224" y="242" width="16" height="10"/>
+<rect class="ic" x="224" y="260" width="14" height="14"/>
+<rect class="smd" x="250" y="242" width="16" height="10"/>
+<rect class="ic" x="250" y="260" width="14" height="14"/>
+<rect class="smd" x="276" y="242" width="16" height="10"/>
+<rect class="ic" x="276" y="260" width="14" height="14"/>
+<rect class="ic" x="62" y="152" width="30" height="22"/>
+<rect class="ic" x="384" y="152" width="30" height="22"/>
+<rect class="jst" x="5" y="102" width="38" height="46" rx="3"/>
+<rect class="jstpin" x="21.0" y="110.5" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="122.0" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="133.5" width="6" height="6"/>
+<rect class="jst" x="5" y="150" width="38" height="46" rx="3"/>
+<rect class="jstpin" x="21.0" y="158.5" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="170.0" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="181.5" width="6" height="6"/>
+<text class="silk" x="50" y="128">L IN</text>
+<text class="silk" x="50" y="176">R IN</text>
+<circle class="pad" cx="100" cy="58" r="5.5"/>
+<text class="silk tiny" x="60" y="48">RES_L CV IN</text>
+<circle class="pad" cx="100" cy="266" r="5.5"/>
+<text class="silk tiny" x="60" y="256">RES_R CV IN</text>
+<rect class="jst" x="241" y="121" width="44" height="62" rx="3"/>
+<rect class="jstpin" x="260.0" y="133.5" width="6" height="6"/>
+<rect class="jstpin" x="260.0" y="149.0" width="6" height="6"/>
+<rect class="jstpin" x="260.0" y="164.5" width="6" height="6"/>
+<text class="silk" x="290" y="158">FILTER</text>
+<circle class="pad" cx="205" cy="166" r="5.5"/>
+<text class="silk tiny" x="166" y="150">FILTER CV IN</text>
+<rect class="jst" x="373" y="50" width="42" height="64" rx="3"/>
+<rect class="jstpin" x="391.0" y="63.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="79.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="95.0" width="6" height="6"/>
+<text class="silk tiny" x="372" y="44">RES L</text>
+<rect class="jst" x="373" y="258" width="42" height="60" rx="3"/>
+<rect class="jstpin" x="391.0" y="270.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="285.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="300.0" width="6" height="6"/>
+<text class="silk tiny" x="372" y="252">RES R</text>
+<rect class="jst" x="428" y="132" width="40" height="42" rx="3"/>
+<rect class="jstpin" x="445.0" y="139.5" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="150.0" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="160.5" width="6" height="6"/>
+<rect class="jst" x="428" y="176" width="40" height="42" rx="3"/>
+<rect class="jstpin" x="445.0" y="183.5" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="194.0" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="204.5" width="6" height="6"/>
+<text class="silk tiny" x="423" y="157" text-anchor="end">L OUT</text>
+<text class="silk tiny" x="423" y="201" text-anchor="end">R OUT</text>
+<rect class="ic" x="96" y="362" width="30" height="22"/>
+<rect class="ic" x="96" y="416" width="30" height="22"/>
+<rect class="ic" x="196" y="372" width="30" height="22"/>
+<rect class="ic" x="196" y="418" width="30" height="22"/>
+<rect class="ic" x="262" y="362" width="30" height="22"/>
+<rect class="ic" x="262" y="410" width="30" height="22"/>
+<rect class="ic" x="146" y="372" width="28" height="20"/>
+<rect class="ic" x="146" y="418" width="28" height="20"/>
+<rect class="powerzone" x="88" y="356" width="236" height="96" rx="6"/>
+<text class="silk tiny" x="206" y="402" text-anchor="middle" opacity=".75">питание ±15 В</text>
+<circle class="pad" cx="351" cy="421" r="5.5"/>
+<text class="silk tiny" x="336" y="412">+VBUS</text>
+<rect class="sc" x="58" y="434" width="30" height="30" rx="3"/>
+<rect class="sc" x="254" y="468" width="28" height="28" rx="3"/>
+<rect class="metal hl" x="408" y="418" width="86" height="60" rx="4"/>
+<rect class="metalin" x="420" y="428" width="56" height="40" rx="3"/>
+<rect class="silkbox" x="20" y="498" width="124" height="118" rx="4"/>
+<text class="silk" x="26" y="514">FILTER CV</text>
+<rect class="ic" x="92" y="526" width="26" height="34"/>
+<circle class="pad" cx="64" cy="528" r="5.5"/>
+<text class="silk tiny" x="40" y="532">J2</text>
+<circle class="pad" cx="64" cy="563" r="5.5"/>
+<text class="silk" x="56" y="596">CV</text>
+<circle class="pad" cx="156" cy="489" r="5.5"/>
+<text class="silk" x="166" y="494">GATE</text>
+<rect class="smd" x="174" y="502" width="12" height="9"/>
+<rect class="hdr" x="306" y="506" width="24" height="44" rx="2"/>
+<rect class="hdrpin" x="314" y="511" width="8" height="8"/>
+<rect class="hdrpin" x="314" y="525" width="8" height="8"/>
+<rect class="hdrpin" x="314" y="539" width="8" height="8"/>
+<text class="silk" x="338" y="520">USART1</text>
+<rect class="led" x="406" y="512" width="16" height="10" rx="2"/>
+<text class="silk tiny" x="428" y="521">NOTEON</text>
+<rect class="din" x="385" y="550" width="132" height="112" rx="6"/>
+<circle class="dinhole" cx="443" cy="606" r="38"/>
+<circle class="dinpin" cx="419" cy="606" r="3"/>
+<circle class="dinpin" cx="426" cy="589" r="3"/>
+<circle class="dinpin" cx="443" cy="582" r="3"/>
+<circle class="dinpin" cx="426" cy="623" r="3"/>
+<circle class="dinpin" cx="443" cy="630" r="3"/>
+<text class="silk" x="483" y="610" text-anchor="middle">THRU</text>
+<rect class="din" x="385" y="664" width="132" height="112" rx="6"/>
+<circle class="dinhole" cx="443" cy="720" r="38"/>
+<circle class="dinpin" cx="419" cy="720" r="3"/>
+<circle class="dinpin" cx="426" cy="703" r="3"/>
+<circle class="dinpin" cx="443" cy="696" r="3"/>
+<circle class="dinpin" cx="426" cy="737" r="3"/>
+<circle class="dinpin" cx="443" cy="744" r="3"/>
+<text class="silk" x="483" y="724" text-anchor="middle">IN</text>
+<rect class="hdr hl" x="201" y="534" width="24" height="86" rx="2"/>
+<rect class="hdrpin" x="209" y="539" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="553" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="567" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="581" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="595" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="609" width="8" height="8"/>
+<text class="silk" x="178" y="560" transform="rotate(-90 178 560)" text-anchor="end">SWD</text>
+<rect class="mcu" x="276" y="584" width="56" height="56" rx="2"/>
+<line class="mcupin" x1="270" y1="590" x2="276" y2="590"/>
+<line class="mcupin" x1="332" y1="590" x2="338" y2="590"/>
+<line class="mcupin" x1="282" y1="578" x2="282" y2="584"/>
+<line class="mcupin" x1="282" y1="640" x2="282" y2="646"/>
+<line class="mcupin" x1="270" y1="596" x2="276" y2="596"/>
+<line class="mcupin" x1="332" y1="596" x2="338" y2="596"/>
+<line class="mcupin" x1="288" y1="578" x2="288" y2="584"/>
+<line class="mcupin" x1="288" y1="640" x2="288" y2="646"/>
+<line class="mcupin" x1="270" y1="602" x2="276" y2="602"/>
+<line class="mcupin" x1="332" y1="602" x2="338" y2="602"/>
+<line class="mcupin" x1="294" y1="578" x2="294" y2="584"/>
+<line class="mcupin" x1="294" y1="640" x2="294" y2="646"/>
+<line class="mcupin" x1="270" y1="608" x2="276" y2="608"/>
+<line class="mcupin" x1="332" y1="608" x2="338" y2="608"/>
+<line class="mcupin" x1="300" y1="578" x2="300" y2="584"/>
+<line class="mcupin" x1="300" y1="640" x2="300" y2="646"/>
+<line class="mcupin" x1="270" y1="614" x2="276" y2="614"/>
+<line class="mcupin" x1="332" y1="614" x2="338" y2="614"/>
+<line class="mcupin" x1="306" y1="578" x2="306" y2="584"/>
+<line class="mcupin" x1="306" y1="640" x2="306" y2="646"/>
+<line class="mcupin" x1="270" y1="620" x2="276" y2="620"/>
+<line class="mcupin" x1="332" y1="620" x2="338" y2="620"/>
+<line class="mcupin" x1="312" y1="578" x2="312" y2="584"/>
+<line class="mcupin" x1="312" y1="640" x2="312" y2="646"/>
+<line class="mcupin" x1="270" y1="626" x2="276" y2="626"/>
+<line class="mcupin" x1="332" y1="626" x2="338" y2="626"/>
+<line class="mcupin" x1="318" y1="578" x2="318" y2="584"/>
+<line class="mcupin" x1="318" y1="640" x2="318" y2="646"/>
+<line class="mcupin" x1="270" y1="632" x2="276" y2="632"/>
+<line class="mcupin" x1="332" y1="632" x2="338" y2="632"/>
+<line class="mcupin" x1="324" y1="578" x2="324" y2="584"/>
+<line class="mcupin" x1="324" y1="640" x2="324" y2="646"/>
+<text class="silk tiny" x="304" y="616" text-anchor="middle">STM32</text>
+<text class="silk tiny" x="304" y="628" text-anchor="middle">F446</text>
+<rect class="smd" x="280" y="664" width="14" height="10"/>
+<circle class="pad" cx="205" cy="624" r="4.5"/>
+<circle class="pad" cx="207" cy="637" r="4.5"/>
+<circle class="pad" cx="210" cy="650" r="4.5"/>
+<circle class="pad" cx="214" cy="663" r="4.5"/>
+<circle class="pad" cx="219" cy="676" r="4.5"/>
+<circle class="pad" cx="226" cy="689" r="4.5"/>
+<circle class="pad" cx="233" cy="702" r="4.5"/>
+<text class="silk tiny" x="244" y="706">J31</text>
+<rect class="button" x="240" y="720" width="40" height="32" rx="3"/>
+<circle class="buttoncap" cx="260" cy="736" r="9"/>
+<text class="silk" x="260" y="772" text-anchor="middle">LEARN</text>
+<rect class="ic" x="340" y="724" width="22" height="16"/>
+<rect class="ic" x="340" y="752" width="22" height="16"/>
+<rect class="ic" x="368" y="772" width="22" height="16"/>
+</g></g>
+<rect class="cropframe" x="300" y="40" width="507.5" height="406.0" rx="12"/>
+<rect class="stlink" x="30" y="150" width="190" height="250" rx="14"/>
+<rect class="dev" x="90" y="100" width="70" height="54" rx="4"/>
+<text class="lblsub" x="125.0" y="90.0" text-anchor="middle">в USB компьютера</text>
+<text class="devtitle" x="125.0" y="184.0" text-anchor="middle">ST-LINK V2</text>
+<text class="devline" x="125.0" y="204.0" text-anchor="middle">надписи на корпусе</text>
+<rect class="hdrpin big" x="180" y="233" width="18" height="18"/>
+<text class="pinname" x="168.0" y="247.0" text-anchor="end">3.3V</text>
+<rect class="hdrpin big" x="180" y="271" width="18" height="18"/>
+<text class="pinname" x="168.0" y="285.0" text-anchor="end">SWCLK</text>
+<rect class="hdrpin big" x="180" y="309" width="18" height="18"/>
+<text class="pinname" x="168.0" y="323.0" text-anchor="end">GND</text>
+<rect class="hdrpin big" x="180" y="347" width="18" height="18"/>
+<text class="pinname" x="168.0" y="361.0" text-anchor="end">SWDIO</text>
+<path class="wire w-blue" d="M198.0,280.0 L245.0,280.0 L245.0,267.6 L391.4,267.6"/>
+<circle class="wireend w-blue" cx="198.0" cy="280.0" r="4"/>
+<circle class="wireend w-blue" cx="391.4" cy="267.6" r="4"/>
+<path class="wire w-gnd" d="M198.0,318.0 L262.0,318.0 L262.0,287.9 L391.4,287.9"/>
+<circle class="wireend w-gnd" cx="198.0" cy="318.0" r="4"/>
+<circle class="wireend w-gnd" cx="391.4" cy="287.9" r="4"/>
+<path class="wire w-amber" d="M198.0,356.0 L279.0,356.0 L279.0,308.2 L391.4,308.2"/>
+<circle class="wireend w-amber" cx="198.0" cy="356.0" r="4"/>
+<circle class="wireend w-amber" cx="391.4" cy="308.2" r="4"/>
+<line class="wire w-red dashed" x1="198" y1="242" x2="238" y2="242"/>
+<text class="warn" x="244.0" y="234.0" text-anchor="start">не подключать</text>
+<text class="pinnum halo" x="426.9" y="252.3" text-anchor="start">1</text>
+<text class="pinnum halo" x="426.9" y="272.6" text-anchor="start">2</text>
+<text class="pinnum halo" x="426.9" y="292.9" text-anchor="start">3</text>
+<text class="pinnum halo" x="426.9" y="313.2" text-anchor="start">4</text>
+<text class="pinnum halo" x="426.9" y="333.6" text-anchor="start">5</text>
+<text class="pinnum halo" x="426.9" y="353.8" text-anchor="start">6</text>
+<line class="leader" x1="610.0" y1="24.0" x2="391.4" y2="244.4"/>
+<circle class="leaderdot" cx="391.4" cy="244.4" r="3"/>
+<text class="lbl halo" x="616.0" y="29.0" text-anchor="start">пин 1: 3.3 В при включённом USB</text>
+<rect class="dev" x="830" y="190" width="140" height="100" rx="10"/>
+<text class="devtitle" x="844" y="216">Компьютер</text>
+<text class="devline" x="844" y="240">питание платы</text>
+<text class="devline" x="844" y="260">по USB</text>
+<path class="wire w-usb" d="M798.8,109.6 L900.0,109.6 L900.0,190.0"/>
+<circle class="wireend w-usb" cx="798.8" cy="109.6" r="4"/>
+<circle class="wireend w-usb" cx="900.0" cy="190.0" r="4"/>
+<text class="wlabel halo" x="905.0" y="100.0" text-anchor="start">USB-кабель</text>
+</svg></div><figcaption>Три провода от ST-Link в разъём SWD, питание — от USB-кабеля. Провод 3.3V не нужен.</figcaption></figure>
+<div class="steps">
+<h3>Порядок</h3>
+<ol>
+<li>Впаяй 4-пиновую гребёнку в первые 4 отверстия <b>SWD (J13)</b>. Если там уже стоит разъём — паять не надо.</li>
+<li>Воткни USB-B в компьютер. Найди пин 1: на нём <b>3.3 В</b>. Пин 3 звонится с корпусом USB-разъёма — это земля.</li>
+<li>Провода: <b>SWCLK → 2</b>, <b>GND → 3</b>, <b>SWDIO → 4</b>.</li>
+<li>STM32CubeProgrammer → ST-LINK, SWD → <b>Connect</b> → файл <code>midi_cv_full.hex</code> → Start Programming.</li>
+</ol>
+<h3>Разъём J13</h3>
+<table class="pins"><tr><th>Пин</th><th>Сигнал</th><th>ST-Link</th></tr>
+<tr><td>1</td><td>+3.3 В</td><td>не подключать</td></tr>
+<tr><td>2</td><td>SWCLK</td><td><span class="swatch" style="background:var(--w-blue)"></span>SWCLK</td></tr>
+<tr><td>3</td><td>GND</td><td><span class="swatch" style="background:var(--fg)"></span>GND</td></tr>
+<tr><td>4</td><td>SWDIO</td><td><span class="swatch" style="background:var(--w-amber)"></span>SWDIO</td></tr>
+<tr><td>5, 6</td><td>не подключены</td><td>—</td></tr></table>
+</div></div></section><section class="job" id="usb"><h2>USB: работа и обновление прошивки</h2>
+<p class="lede">Один и тот же кабель. Разница только в том, держишь ли ты LEARN в момент подключения.</p>
+<div class="pair"><figure><div class="scroll"><svg viewBox="0 0 560 470" role="img" aria-label="Обычное включение" class="diagram">
+<defs><clipPath id="clip-usba"><rect x="20" y="60" width="253.0" height="354.2" rx="12"/></clipPath>
+<marker id="arr-usba" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<g clip-path="url(#clip-usba)"><g transform="translate(-187.0 -312.6) scale(0.92)">
+<rect class="pcb" x="0" y="0" width="470" height="825" rx="10"/>
+<circle class="hole" cx="14" cy="14" r="6"/>
+<circle class="hole" cx="456" cy="14" r="6"/>
+<circle class="hole" cx="14" cy="811" r="6"/>
+<circle class="hole" cx="456" cy="811" r="6"/>
+<line class="silkline" x1="8" y1="350" x2="462" y2="350"/>
+<text class="silk" x="150" y="342">MIDI ANALOG FILTER</text>
+<text class="silk" x="330" y="342">PRIBORE PROTOTYPE</text>
+<circle class="cap" cx="112" cy="98" r="27"/>
+<text class="silk tiny" x="112" y="102" text-anchor="middle">220µ</text>
+<circle class="cap" cx="112" cy="300" r="27"/>
+<text class="silk tiny" x="112" y="304" text-anchor="middle">220µ</text>
+<rect class="trimmer" x="142" y="66" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="153" cy="77" r="6"/>
+<rect class="trimmer" x="142" y="272" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="153" cy="283" r="6"/>
+<rect class="trimmer" x="186" y="196" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="197" cy="207" r="6"/>
+<rect class="smd" x="172" y="34" width="16" height="10"/>
+<rect class="ic" x="172" y="52" width="14" height="14"/>
+<rect class="smd" x="198" y="34" width="16" height="10"/>
+<rect class="ic" x="198" y="52" width="14" height="14"/>
+<rect class="smd" x="224" y="34" width="16" height="10"/>
+<rect class="ic" x="224" y="52" width="14" height="14"/>
+<rect class="smd" x="250" y="34" width="16" height="10"/>
+<rect class="ic" x="250" y="52" width="14" height="14"/>
+<rect class="smd" x="276" y="34" width="16" height="10"/>
+<rect class="ic" x="276" y="52" width="14" height="14"/>
+<rect class="smd" x="172" y="242" width="16" height="10"/>
+<rect class="ic" x="172" y="260" width="14" height="14"/>
+<rect class="smd" x="198" y="242" width="16" height="10"/>
+<rect class="ic" x="198" y="260" width="14" height="14"/>
+<rect class="smd" x="224" y="242" width="16" height="10"/>
+<rect class="ic" x="224" y="260" width="14" height="14"/>
+<rect class="smd" x="250" y="242" width="16" height="10"/>
+<rect class="ic" x="250" y="260" width="14" height="14"/>
+<rect class="smd" x="276" y="242" width="16" height="10"/>
+<rect class="ic" x="276" y="260" width="14" height="14"/>
+<rect class="ic" x="62" y="152" width="30" height="22"/>
+<rect class="ic" x="384" y="152" width="30" height="22"/>
+<rect class="jst" x="5" y="102" width="38" height="46" rx="3"/>
+<rect class="jstpin" x="21.0" y="110.5" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="122.0" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="133.5" width="6" height="6"/>
+<rect class="jst" x="5" y="150" width="38" height="46" rx="3"/>
+<rect class="jstpin" x="21.0" y="158.5" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="170.0" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="181.5" width="6" height="6"/>
+<text class="silk" x="50" y="128">L IN</text>
+<text class="silk" x="50" y="176">R IN</text>
+<circle class="pad" cx="100" cy="58" r="5.5"/>
+<text class="silk tiny" x="60" y="48">RES_L CV IN</text>
+<circle class="pad" cx="100" cy="266" r="5.5"/>
+<text class="silk tiny" x="60" y="256">RES_R CV IN</text>
+<rect class="jst" x="241" y="121" width="44" height="62" rx="3"/>
+<rect class="jstpin" x="260.0" y="133.5" width="6" height="6"/>
+<rect class="jstpin" x="260.0" y="149.0" width="6" height="6"/>
+<rect class="jstpin" x="260.0" y="164.5" width="6" height="6"/>
+<text class="silk" x="290" y="158">FILTER</text>
+<circle class="pad" cx="205" cy="166" r="5.5"/>
+<text class="silk tiny" x="166" y="150">FILTER CV IN</text>
+<rect class="jst" x="373" y="50" width="42" height="64" rx="3"/>
+<rect class="jstpin" x="391.0" y="63.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="79.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="95.0" width="6" height="6"/>
+<text class="silk tiny" x="372" y="44">RES L</text>
+<rect class="jst" x="373" y="258" width="42" height="60" rx="3"/>
+<rect class="jstpin" x="391.0" y="270.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="285.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="300.0" width="6" height="6"/>
+<text class="silk tiny" x="372" y="252">RES R</text>
+<rect class="jst" x="428" y="132" width="40" height="42" rx="3"/>
+<rect class="jstpin" x="445.0" y="139.5" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="150.0" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="160.5" width="6" height="6"/>
+<rect class="jst" x="428" y="176" width="40" height="42" rx="3"/>
+<rect class="jstpin" x="445.0" y="183.5" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="194.0" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="204.5" width="6" height="6"/>
+<text class="silk tiny" x="423" y="157" text-anchor="end">L OUT</text>
+<text class="silk tiny" x="423" y="201" text-anchor="end">R OUT</text>
+<rect class="ic" x="96" y="362" width="30" height="22"/>
+<rect class="ic" x="96" y="416" width="30" height="22"/>
+<rect class="ic" x="196" y="372" width="30" height="22"/>
+<rect class="ic" x="196" y="418" width="30" height="22"/>
+<rect class="ic" x="262" y="362" width="30" height="22"/>
+<rect class="ic" x="262" y="410" width="30" height="22"/>
+<rect class="ic" x="146" y="372" width="28" height="20"/>
+<rect class="ic" x="146" y="418" width="28" height="20"/>
+<rect class="powerzone" x="88" y="356" width="236" height="96" rx="6"/>
+<text class="silk tiny" x="206" y="402" text-anchor="middle" opacity=".75">питание ±15 В</text>
+<circle class="pad" cx="351" cy="421" r="5.5"/>
+<text class="silk tiny" x="336" y="412">+VBUS</text>
+<rect class="sc" x="58" y="434" width="30" height="30" rx="3"/>
+<rect class="sc" x="254" y="468" width="28" height="28" rx="3"/>
+<rect class="metal hl" x="408" y="418" width="86" height="60" rx="4"/>
+<rect class="metalin" x="420" y="428" width="56" height="40" rx="3"/>
+<rect class="silkbox" x="20" y="498" width="124" height="118" rx="4"/>
+<text class="silk" x="26" y="514">FILTER CV</text>
+<rect class="ic" x="92" y="526" width="26" height="34"/>
+<circle class="pad" cx="64" cy="528" r="5.5"/>
+<text class="silk tiny" x="40" y="532">J2</text>
+<circle class="pad" cx="64" cy="563" r="5.5"/>
+<text class="silk" x="56" y="596">CV</text>
+<circle class="pad" cx="156" cy="489" r="5.5"/>
+<text class="silk" x="166" y="494">GATE</text>
+<rect class="smd" x="174" y="502" width="12" height="9"/>
+<rect class="hdr" x="306" y="506" width="24" height="44" rx="2"/>
+<rect class="hdrpin" x="314" y="511" width="8" height="8"/>
+<rect class="hdrpin" x="314" y="525" width="8" height="8"/>
+<rect class="hdrpin" x="314" y="539" width="8" height="8"/>
+<text class="silk" x="338" y="520">USART1</text>
+<rect class="led hl" x="406" y="512" width="16" height="10" rx="2"/>
+<text class="silk tiny" x="428" y="521">NOTEON</text>
+<rect class="din" x="385" y="550" width="132" height="112" rx="6"/>
+<circle class="dinhole" cx="443" cy="606" r="38"/>
+<circle class="dinpin" cx="419" cy="606" r="3"/>
+<circle class="dinpin" cx="426" cy="589" r="3"/>
+<circle class="dinpin" cx="443" cy="582" r="3"/>
+<circle class="dinpin" cx="426" cy="623" r="3"/>
+<circle class="dinpin" cx="443" cy="630" r="3"/>
+<text class="silk" x="483" y="610" text-anchor="middle">THRU</text>
+<rect class="din" x="385" y="664" width="132" height="112" rx="6"/>
+<circle class="dinhole" cx="443" cy="720" r="38"/>
+<circle class="dinpin" cx="419" cy="720" r="3"/>
+<circle class="dinpin" cx="426" cy="703" r="3"/>
+<circle class="dinpin" cx="443" cy="696" r="3"/>
+<circle class="dinpin" cx="426" cy="737" r="3"/>
+<circle class="dinpin" cx="443" cy="744" r="3"/>
+<text class="silk" x="483" y="724" text-anchor="middle">IN</text>
+<rect class="hdr" x="201" y="534" width="24" height="86" rx="2"/>
+<rect class="hdrpin" x="209" y="539" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="553" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="567" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="581" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="595" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="609" width="8" height="8"/>
+<text class="silk" x="178" y="560" transform="rotate(-90 178 560)" text-anchor="end">SWD</text>
+<rect class="mcu" x="276" y="584" width="56" height="56" rx="2"/>
+<line class="mcupin" x1="270" y1="590" x2="276" y2="590"/>
+<line class="mcupin" x1="332" y1="590" x2="338" y2="590"/>
+<line class="mcupin" x1="282" y1="578" x2="282" y2="584"/>
+<line class="mcupin" x1="282" y1="640" x2="282" y2="646"/>
+<line class="mcupin" x1="270" y1="596" x2="276" y2="596"/>
+<line class="mcupin" x1="332" y1="596" x2="338" y2="596"/>
+<line class="mcupin" x1="288" y1="578" x2="288" y2="584"/>
+<line class="mcupin" x1="288" y1="640" x2="288" y2="646"/>
+<line class="mcupin" x1="270" y1="602" x2="276" y2="602"/>
+<line class="mcupin" x1="332" y1="602" x2="338" y2="602"/>
+<line class="mcupin" x1="294" y1="578" x2="294" y2="584"/>
+<line class="mcupin" x1="294" y1="640" x2="294" y2="646"/>
+<line class="mcupin" x1="270" y1="608" x2="276" y2="608"/>
+<line class="mcupin" x1="332" y1="608" x2="338" y2="608"/>
+<line class="mcupin" x1="300" y1="578" x2="300" y2="584"/>
+<line class="mcupin" x1="300" y1="640" x2="300" y2="646"/>
+<line class="mcupin" x1="270" y1="614" x2="276" y2="614"/>
+<line class="mcupin" x1="332" y1="614" x2="338" y2="614"/>
+<line class="mcupin" x1="306" y1="578" x2="306" y2="584"/>
+<line class="mcupin" x1="306" y1="640" x2="306" y2="646"/>
+<line class="mcupin" x1="270" y1="620" x2="276" y2="620"/>
+<line class="mcupin" x1="332" y1="620" x2="338" y2="620"/>
+<line class="mcupin" x1="312" y1="578" x2="312" y2="584"/>
+<line class="mcupin" x1="312" y1="640" x2="312" y2="646"/>
+<line class="mcupin" x1="270" y1="626" x2="276" y2="626"/>
+<line class="mcupin" x1="332" y1="626" x2="338" y2="626"/>
+<line class="mcupin" x1="318" y1="578" x2="318" y2="584"/>
+<line class="mcupin" x1="318" y1="640" x2="318" y2="646"/>
+<line class="mcupin" x1="270" y1="632" x2="276" y2="632"/>
+<line class="mcupin" x1="332" y1="632" x2="338" y2="632"/>
+<line class="mcupin" x1="324" y1="578" x2="324" y2="584"/>
+<line class="mcupin" x1="324" y1="640" x2="324" y2="646"/>
+<text class="silk tiny" x="304" y="616" text-anchor="middle">STM32</text>
+<text class="silk tiny" x="304" y="628" text-anchor="middle">F446</text>
+<rect class="smd" x="280" y="664" width="14" height="10"/>
+<circle class="pad" cx="205" cy="624" r="4.5"/>
+<circle class="pad" cx="207" cy="637" r="4.5"/>
+<circle class="pad" cx="210" cy="650" r="4.5"/>
+<circle class="pad" cx="214" cy="663" r="4.5"/>
+<circle class="pad" cx="219" cy="676" r="4.5"/>
+<circle class="pad" cx="226" cy="689" r="4.5"/>
+<circle class="pad" cx="233" cy="702" r="4.5"/>
+<text class="silk tiny" x="244" y="706">J31</text>
+<rect class="button hl" x="240" y="720" width="40" height="32" rx="3"/>
+<circle class="buttoncap" cx="260" cy="736" r="9"/>
+<text class="silk" x="260" y="772" text-anchor="middle">LEARN</text>
+<rect class="ic" x="340" y="724" width="22" height="16"/>
+<rect class="ic" x="340" y="752" width="22" height="16"/>
+<rect class="ic" x="368" y="772" width="22" height="16"/>
+</g></g>
+<rect class="cropframe" x="20" y="60" width="253.0" height="354.2" rx="12"/>
+<text class="paneltitle" x="20.0" y="34.0" text-anchor="start">Обычное включение</text>
+<rect class="dev" x="330" y="120" width="210" height="150" rx="10"/>
+<text class="devtitle" x="344" y="146">Компьютер видит</text>
+<text class="devline" x="344" y="170">MIDI: «MIDI-CV Alpha»</text>
+<text class="devline" x="344" y="190">COM-порт: консоль</text>
+<text class="devline" x="344" y="210">(драйверы не нужны)</text>
+<path class="wire w-usb" d="M267.5,99.6 L287.5,99.6 L287.5,195.0 L330.0,195.0"/>
+<circle class="wireend w-usb" cx="267.5" cy="99.6" r="4"/>
+<circle class="wireend w-usb" cx="330.0" cy="195.0" r="4"/>
+<line class="leader" x1="330.0" y1="400.0" x2="64.2" y2="364.5"/>
+<circle class="leaderdot" cx="64.2" cy="364.5" r="3"/>
+<text class="lbl halo" x="336.0" y="405.0" text-anchor="start">не нажимать</text>
+<line class="leader" x1="330.0" y1="330.0" x2="202.9" y2="163.0"/>
+<circle class="leaderdot" cx="202.9" cy="163.0" r="3"/>
+<text class="lbl halo" x="336.0" y="335.0" text-anchor="start">NOTEON: горит на ноте</text>
+</svg></div><figcaption>Обычный запуск: плата видна как MIDI-устройство и COM-порт.</figcaption></figure>
+<figure><div class="scroll"><svg viewBox="0 0 560 470" role="img" aria-label="Режим обновления" class="diagram">
+<defs><clipPath id="clip-usbb"><rect x="20" y="60" width="253.0" height="354.2" rx="12"/></clipPath>
+<marker id="arr-usbb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<g clip-path="url(#clip-usbb)"><g transform="translate(-187.0 -312.6) scale(0.92)">
+<rect class="pcb" x="0" y="0" width="470" height="825" rx="10"/>
+<circle class="hole" cx="14" cy="14" r="6"/>
+<circle class="hole" cx="456" cy="14" r="6"/>
+<circle class="hole" cx="14" cy="811" r="6"/>
+<circle class="hole" cx="456" cy="811" r="6"/>
+<line class="silkline" x1="8" y1="350" x2="462" y2="350"/>
+<text class="silk" x="150" y="342">MIDI ANALOG FILTER</text>
+<text class="silk" x="330" y="342">PRIBORE PROTOTYPE</text>
+<circle class="cap" cx="112" cy="98" r="27"/>
+<text class="silk tiny" x="112" y="102" text-anchor="middle">220µ</text>
+<circle class="cap" cx="112" cy="300" r="27"/>
+<text class="silk tiny" x="112" y="304" text-anchor="middle">220µ</text>
+<rect class="trimmer" x="142" y="66" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="153" cy="77" r="6"/>
+<rect class="trimmer" x="142" y="272" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="153" cy="283" r="6"/>
+<rect class="trimmer" x="186" y="196" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="197" cy="207" r="6"/>
+<rect class="smd" x="172" y="34" width="16" height="10"/>
+<rect class="ic" x="172" y="52" width="14" height="14"/>
+<rect class="smd" x="198" y="34" width="16" height="10"/>
+<rect class="ic" x="198" y="52" width="14" height="14"/>
+<rect class="smd" x="224" y="34" width="16" height="10"/>
+<rect class="ic" x="224" y="52" width="14" height="14"/>
+<rect class="smd" x="250" y="34" width="16" height="10"/>
+<rect class="ic" x="250" y="52" width="14" height="14"/>
+<rect class="smd" x="276" y="34" width="16" height="10"/>
+<rect class="ic" x="276" y="52" width="14" height="14"/>
+<rect class="smd" x="172" y="242" width="16" height="10"/>
+<rect class="ic" x="172" y="260" width="14" height="14"/>
+<rect class="smd" x="198" y="242" width="16" height="10"/>
+<rect class="ic" x="198" y="260" width="14" height="14"/>
+<rect class="smd" x="224" y="242" width="16" height="10"/>
+<rect class="ic" x="224" y="260" width="14" height="14"/>
+<rect class="smd" x="250" y="242" width="16" height="10"/>
+<rect class="ic" x="250" y="260" width="14" height="14"/>
+<rect class="smd" x="276" y="242" width="16" height="10"/>
+<rect class="ic" x="276" y="260" width="14" height="14"/>
+<rect class="ic" x="62" y="152" width="30" height="22"/>
+<rect class="ic" x="384" y="152" width="30" height="22"/>
+<rect class="jst" x="5" y="102" width="38" height="46" rx="3"/>
+<rect class="jstpin" x="21.0" y="110.5" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="122.0" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="133.5" width="6" height="6"/>
+<rect class="jst" x="5" y="150" width="38" height="46" rx="3"/>
+<rect class="jstpin" x="21.0" y="158.5" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="170.0" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="181.5" width="6" height="6"/>
+<text class="silk" x="50" y="128">L IN</text>
+<text class="silk" x="50" y="176">R IN</text>
+<circle class="pad" cx="100" cy="58" r="5.5"/>
+<text class="silk tiny" x="60" y="48">RES_L CV IN</text>
+<circle class="pad" cx="100" cy="266" r="5.5"/>
+<text class="silk tiny" x="60" y="256">RES_R CV IN</text>
+<rect class="jst" x="241" y="121" width="44" height="62" rx="3"/>
+<rect class="jstpin" x="260.0" y="133.5" width="6" height="6"/>
+<rect class="jstpin" x="260.0" y="149.0" width="6" height="6"/>
+<rect class="jstpin" x="260.0" y="164.5" width="6" height="6"/>
+<text class="silk" x="290" y="158">FILTER</text>
+<circle class="pad" cx="205" cy="166" r="5.5"/>
+<text class="silk tiny" x="166" y="150">FILTER CV IN</text>
+<rect class="jst" x="373" y="50" width="42" height="64" rx="3"/>
+<rect class="jstpin" x="391.0" y="63.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="79.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="95.0" width="6" height="6"/>
+<text class="silk tiny" x="372" y="44">RES L</text>
+<rect class="jst" x="373" y="258" width="42" height="60" rx="3"/>
+<rect class="jstpin" x="391.0" y="270.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="285.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="300.0" width="6" height="6"/>
+<text class="silk tiny" x="372" y="252">RES R</text>
+<rect class="jst" x="428" y="132" width="40" height="42" rx="3"/>
+<rect class="jstpin" x="445.0" y="139.5" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="150.0" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="160.5" width="6" height="6"/>
+<rect class="jst" x="428" y="176" width="40" height="42" rx="3"/>
+<rect class="jstpin" x="445.0" y="183.5" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="194.0" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="204.5" width="6" height="6"/>
+<text class="silk tiny" x="423" y="157" text-anchor="end">L OUT</text>
+<text class="silk tiny" x="423" y="201" text-anchor="end">R OUT</text>
+<rect class="ic" x="96" y="362" width="30" height="22"/>
+<rect class="ic" x="96" y="416" width="30" height="22"/>
+<rect class="ic" x="196" y="372" width="30" height="22"/>
+<rect class="ic" x="196" y="418" width="30" height="22"/>
+<rect class="ic" x="262" y="362" width="30" height="22"/>
+<rect class="ic" x="262" y="410" width="30" height="22"/>
+<rect class="ic" x="146" y="372" width="28" height="20"/>
+<rect class="ic" x="146" y="418" width="28" height="20"/>
+<rect class="powerzone" x="88" y="356" width="236" height="96" rx="6"/>
+<text class="silk tiny" x="206" y="402" text-anchor="middle" opacity=".75">питание ±15 В</text>
+<circle class="pad" cx="351" cy="421" r="5.5"/>
+<text class="silk tiny" x="336" y="412">+VBUS</text>
+<rect class="sc" x="58" y="434" width="30" height="30" rx="3"/>
+<rect class="sc" x="254" y="468" width="28" height="28" rx="3"/>
+<rect class="metal hl" x="408" y="418" width="86" height="60" rx="4"/>
+<rect class="metalin" x="420" y="428" width="56" height="40" rx="3"/>
+<rect class="silkbox" x="20" y="498" width="124" height="118" rx="4"/>
+<text class="silk" x="26" y="514">FILTER CV</text>
+<rect class="ic" x="92" y="526" width="26" height="34"/>
+<circle class="pad" cx="64" cy="528" r="5.5"/>
+<text class="silk tiny" x="40" y="532">J2</text>
+<circle class="pad" cx="64" cy="563" r="5.5"/>
+<text class="silk" x="56" y="596">CV</text>
+<circle class="pad" cx="156" cy="489" r="5.5"/>
+<text class="silk" x="166" y="494">GATE</text>
+<rect class="smd" x="174" y="502" width="12" height="9"/>
+<rect class="hdr" x="306" y="506" width="24" height="44" rx="2"/>
+<rect class="hdrpin" x="314" y="511" width="8" height="8"/>
+<rect class="hdrpin" x="314" y="525" width="8" height="8"/>
+<rect class="hdrpin" x="314" y="539" width="8" height="8"/>
+<text class="silk" x="338" y="520">USART1</text>
+<rect class="led hl" x="406" y="512" width="16" height="10" rx="2"/>
+<text class="silk tiny" x="428" y="521">NOTEON</text>
+<rect class="din" x="385" y="550" width="132" height="112" rx="6"/>
+<circle class="dinhole" cx="443" cy="606" r="38"/>
+<circle class="dinpin" cx="419" cy="606" r="3"/>
+<circle class="dinpin" cx="426" cy="589" r="3"/>
+<circle class="dinpin" cx="443" cy="582" r="3"/>
+<circle class="dinpin" cx="426" cy="623" r="3"/>
+<circle class="dinpin" cx="443" cy="630" r="3"/>
+<text class="silk" x="483" y="610" text-anchor="middle">THRU</text>
+<rect class="din" x="385" y="664" width="132" height="112" rx="6"/>
+<circle class="dinhole" cx="443" cy="720" r="38"/>
+<circle class="dinpin" cx="419" cy="720" r="3"/>
+<circle class="dinpin" cx="426" cy="703" r="3"/>
+<circle class="dinpin" cx="443" cy="696" r="3"/>
+<circle class="dinpin" cx="426" cy="737" r="3"/>
+<circle class="dinpin" cx="443" cy="744" r="3"/>
+<text class="silk" x="483" y="724" text-anchor="middle">IN</text>
+<rect class="hdr" x="201" y="534" width="24" height="86" rx="2"/>
+<rect class="hdrpin" x="209" y="539" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="553" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="567" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="581" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="595" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="609" width="8" height="8"/>
+<text class="silk" x="178" y="560" transform="rotate(-90 178 560)" text-anchor="end">SWD</text>
+<rect class="mcu" x="276" y="584" width="56" height="56" rx="2"/>
+<line class="mcupin" x1="270" y1="590" x2="276" y2="590"/>
+<line class="mcupin" x1="332" y1="590" x2="338" y2="590"/>
+<line class="mcupin" x1="282" y1="578" x2="282" y2="584"/>
+<line class="mcupin" x1="282" y1="640" x2="282" y2="646"/>
+<line class="mcupin" x1="270" y1="596" x2="276" y2="596"/>
+<line class="mcupin" x1="332" y1="596" x2="338" y2="596"/>
+<line class="mcupin" x1="288" y1="578" x2="288" y2="584"/>
+<line class="mcupin" x1="288" y1="640" x2="288" y2="646"/>
+<line class="mcupin" x1="270" y1="602" x2="276" y2="602"/>
+<line class="mcupin" x1="332" y1="602" x2="338" y2="602"/>
+<line class="mcupin" x1="294" y1="578" x2="294" y2="584"/>
+<line class="mcupin" x1="294" y1="640" x2="294" y2="646"/>
+<line class="mcupin" x1="270" y1="608" x2="276" y2="608"/>
+<line class="mcupin" x1="332" y1="608" x2="338" y2="608"/>
+<line class="mcupin" x1="300" y1="578" x2="300" y2="584"/>
+<line class="mcupin" x1="300" y1="640" x2="300" y2="646"/>
+<line class="mcupin" x1="270" y1="614" x2="276" y2="614"/>
+<line class="mcupin" x1="332" y1="614" x2="338" y2="614"/>
+<line class="mcupin" x1="306" y1="578" x2="306" y2="584"/>
+<line class="mcupin" x1="306" y1="640" x2="306" y2="646"/>
+<line class="mcupin" x1="270" y1="620" x2="276" y2="620"/>
+<line class="mcupin" x1="332" y1="620" x2="338" y2="620"/>
+<line class="mcupin" x1="312" y1="578" x2="312" y2="584"/>
+<line class="mcupin" x1="312" y1="640" x2="312" y2="646"/>
+<line class="mcupin" x1="270" y1="626" x2="276" y2="626"/>
+<line class="mcupin" x1="332" y1="626" x2="338" y2="626"/>
+<line class="mcupin" x1="318" y1="578" x2="318" y2="584"/>
+<line class="mcupin" x1="318" y1="640" x2="318" y2="646"/>
+<line class="mcupin" x1="270" y1="632" x2="276" y2="632"/>
+<line class="mcupin" x1="332" y1="632" x2="338" y2="632"/>
+<line class="mcupin" x1="324" y1="578" x2="324" y2="584"/>
+<line class="mcupin" x1="324" y1="640" x2="324" y2="646"/>
+<text class="silk tiny" x="304" y="616" text-anchor="middle">STM32</text>
+<text class="silk tiny" x="304" y="628" text-anchor="middle">F446</text>
+<rect class="smd" x="280" y="664" width="14" height="10"/>
+<circle class="pad" cx="205" cy="624" r="4.5"/>
+<circle class="pad" cx="207" cy="637" r="4.5"/>
+<circle class="pad" cx="210" cy="650" r="4.5"/>
+<circle class="pad" cx="214" cy="663" r="4.5"/>
+<circle class="pad" cx="219" cy="676" r="4.5"/>
+<circle class="pad" cx="226" cy="689" r="4.5"/>
+<circle class="pad" cx="233" cy="702" r="4.5"/>
+<text class="silk tiny" x="244" y="706">J31</text>
+<rect class="button hl" x="240" y="720" width="40" height="32" rx="3"/>
+<circle class="buttoncap" cx="260" cy="736" r="9"/>
+<text class="silk" x="260" y="772" text-anchor="middle">LEARN</text>
+<rect class="ic" x="340" y="724" width="22" height="16"/>
+<rect class="ic" x="340" y="752" width="22" height="16"/>
+<rect class="ic" x="368" y="772" width="22" height="16"/>
+</g></g>
+<rect class="cropframe" x="20" y="60" width="253.0" height="354.2" rx="12"/>
+<text class="paneltitle" x="20.0" y="34.0" text-anchor="start">Режим обновления</text>
+<rect class="dev" x="330" y="120" width="210" height="150" rx="10"/>
+<text class="devtitle" x="344" y="146">Компьютер видит</text>
+<text class="devline" x="344" y="170">«MIDI-CV Alpha Updater»</text>
+<text class="devline" x="344" y="190">MIDI и COM нет</text>
+<text class="devline" x="344" y="210">→ dfu-util -a 0 -D …</text>
+<path class="wire w-usb" d="M267.5,99.6 L287.5,99.6 L287.5,195.0 L330.0,195.0"/>
+<circle class="wireend w-usb" cx="267.5" cy="99.6" r="4"/>
+<circle class="wireend w-usb" cx="330.0" cy="195.0" r="4"/>
+<circle class="press" cx="52.2" cy="364.5" r="22"/>
+<line class="leader" x1="330.0" y1="400.0" x2="74.2" y2="364.5"/>
+<circle class="leaderdot" cx="74.2" cy="364.5" r="3"/>
+<text class="lbl halo" x="336.0" y="405.0" text-anchor="start">держать, пока втыкаешь USB</text>
+<line class="leader" x1="330.0" y1="330.0" x2="202.9" y2="163.0"/>
+<circle class="leaderdot" cx="202.9" cy="163.0" r="3"/>
+<text class="lbl halo" x="336.0" y="335.0" text-anchor="start">NOTEON медленно мигает</text>
+</svg></div><figcaption>С зажатой LEARN: плата ждёт новую прошивку.</figcaption></figure></div>
+<div class="steps" style="margin-top:18px">
+<h3>Обновить прошивку</h3>
+<ol>
+<li>Зажми LEARN, воткни USB, отпусти. Или набери <code>dfu</code> в COM-порту.</li>
+<li><code>dfu-util -a 0 -D midi_cv_alpha.dfu</code></li>
+<li>Через полторы секунды плата сама запустит новую прошивку. Передумал — коротко нажми LEARN.</li>
+</ol></div></section><section class="job" id="midi"><h2>MIDI</h2>
+<p class="lede">Обычный 5-пиновый MIDI-кабель. Вместо клавиатуры можно играть из компьютера по USB — плата принимает оба входа сразу.</p>
+<div class="grid"><figure><div class="scroll"><svg viewBox="0 0 900 470" role="img" aria-label="MIDI-клавиатура подключается в нижний DIN (IN), верхний DIN (THRU) отдаёт копию дальше" class="diagram">
+<defs><clipPath id="clip-midi"><rect x="40" y="40" width="310.5" height="378.0" rx="12"/></clipPath>
+<marker id="arr-midi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<g clip-path="url(#clip-midi)"><g transform="translate(-365.0 -662.0) scale(1.35)">
+<rect class="pcb" x="0" y="0" width="470" height="825" rx="10"/>
+<circle class="hole" cx="14" cy="14" r="6"/>
+<circle class="hole" cx="456" cy="14" r="6"/>
+<circle class="hole" cx="14" cy="811" r="6"/>
+<circle class="hole" cx="456" cy="811" r="6"/>
+<line class="silkline" x1="8" y1="350" x2="462" y2="350"/>
+<text class="silk" x="150" y="342">MIDI ANALOG FILTER</text>
+<text class="silk" x="330" y="342">PRIBORE PROTOTYPE</text>
+<circle class="cap" cx="112" cy="98" r="27"/>
+<text class="silk tiny" x="112" y="102" text-anchor="middle">220µ</text>
+<circle class="cap" cx="112" cy="300" r="27"/>
+<text class="silk tiny" x="112" y="304" text-anchor="middle">220µ</text>
+<rect class="trimmer" x="142" y="66" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="153" cy="77" r="6"/>
+<rect class="trimmer" x="142" y="272" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="153" cy="283" r="6"/>
+<rect class="trimmer" x="186" y="196" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="197" cy="207" r="6"/>
+<rect class="smd" x="172" y="34" width="16" height="10"/>
+<rect class="ic" x="172" y="52" width="14" height="14"/>
+<rect class="smd" x="198" y="34" width="16" height="10"/>
+<rect class="ic" x="198" y="52" width="14" height="14"/>
+<rect class="smd" x="224" y="34" width="16" height="10"/>
+<rect class="ic" x="224" y="52" width="14" height="14"/>
+<rect class="smd" x="250" y="34" width="16" height="10"/>
+<rect class="ic" x="250" y="52" width="14" height="14"/>
+<rect class="smd" x="276" y="34" width="16" height="10"/>
+<rect class="ic" x="276" y="52" width="14" height="14"/>
+<rect class="smd" x="172" y="242" width="16" height="10"/>
+<rect class="ic" x="172" y="260" width="14" height="14"/>
+<rect class="smd" x="198" y="242" width="16" height="10"/>
+<rect class="ic" x="198" y="260" width="14" height="14"/>
+<rect class="smd" x="224" y="242" width="16" height="10"/>
+<rect class="ic" x="224" y="260" width="14" height="14"/>
+<rect class="smd" x="250" y="242" width="16" height="10"/>
+<rect class="ic" x="250" y="260" width="14" height="14"/>
+<rect class="smd" x="276" y="242" width="16" height="10"/>
+<rect class="ic" x="276" y="260" width="14" height="14"/>
+<rect class="ic" x="62" y="152" width="30" height="22"/>
+<rect class="ic" x="384" y="152" width="30" height="22"/>
+<rect class="jst" x="5" y="102" width="38" height="46" rx="3"/>
+<rect class="jstpin" x="21.0" y="110.5" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="122.0" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="133.5" width="6" height="6"/>
+<rect class="jst" x="5" y="150" width="38" height="46" rx="3"/>
+<rect class="jstpin" x="21.0" y="158.5" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="170.0" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="181.5" width="6" height="6"/>
+<text class="silk" x="50" y="128">L IN</text>
+<text class="silk" x="50" y="176">R IN</text>
+<circle class="pad" cx="100" cy="58" r="5.5"/>
+<text class="silk tiny" x="60" y="48">RES_L CV IN</text>
+<circle class="pad" cx="100" cy="266" r="5.5"/>
+<text class="silk tiny" x="60" y="256">RES_R CV IN</text>
+<rect class="jst" x="241" y="121" width="44" height="62" rx="3"/>
+<rect class="jstpin" x="260.0" y="133.5" width="6" height="6"/>
+<rect class="jstpin" x="260.0" y="149.0" width="6" height="6"/>
+<rect class="jstpin" x="260.0" y="164.5" width="6" height="6"/>
+<text class="silk" x="290" y="158">FILTER</text>
+<circle class="pad" cx="205" cy="166" r="5.5"/>
+<text class="silk tiny" x="166" y="150">FILTER CV IN</text>
+<rect class="jst" x="373" y="50" width="42" height="64" rx="3"/>
+<rect class="jstpin" x="391.0" y="63.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="79.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="95.0" width="6" height="6"/>
+<text class="silk tiny" x="372" y="44">RES L</text>
+<rect class="jst" x="373" y="258" width="42" height="60" rx="3"/>
+<rect class="jstpin" x="391.0" y="270.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="285.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="300.0" width="6" height="6"/>
+<text class="silk tiny" x="372" y="252">RES R</text>
+<rect class="jst" x="428" y="132" width="40" height="42" rx="3"/>
+<rect class="jstpin" x="445.0" y="139.5" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="150.0" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="160.5" width="6" height="6"/>
+<rect class="jst" x="428" y="176" width="40" height="42" rx="3"/>
+<rect class="jstpin" x="445.0" y="183.5" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="194.0" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="204.5" width="6" height="6"/>
+<text class="silk tiny" x="423" y="157" text-anchor="end">L OUT</text>
+<text class="silk tiny" x="423" y="201" text-anchor="end">R OUT</text>
+<rect class="ic" x="96" y="362" width="30" height="22"/>
+<rect class="ic" x="96" y="416" width="30" height="22"/>
+<rect class="ic" x="196" y="372" width="30" height="22"/>
+<rect class="ic" x="196" y="418" width="30" height="22"/>
+<rect class="ic" x="262" y="362" width="30" height="22"/>
+<rect class="ic" x="262" y="410" width="30" height="22"/>
+<rect class="ic" x="146" y="372" width="28" height="20"/>
+<rect class="ic" x="146" y="418" width="28" height="20"/>
+<rect class="powerzone" x="88" y="356" width="236" height="96" rx="6"/>
+<text class="silk tiny" x="206" y="402" text-anchor="middle" opacity=".75">питание ±15 В</text>
+<circle class="pad" cx="351" cy="421" r="5.5"/>
+<text class="silk tiny" x="336" y="412">+VBUS</text>
+<rect class="sc" x="58" y="434" width="30" height="30" rx="3"/>
+<rect class="sc" x="254" y="468" width="28" height="28" rx="3"/>
+<rect class="metal" x="408" y="418" width="86" height="60" rx="4"/>
+<rect class="metalin" x="420" y="428" width="56" height="40" rx="3"/>
+<rect class="silkbox" x="20" y="498" width="124" height="118" rx="4"/>
+<text class="silk" x="26" y="514">FILTER CV</text>
+<rect class="ic" x="92" y="526" width="26" height="34"/>
+<circle class="pad" cx="64" cy="528" r="5.5"/>
+<text class="silk tiny" x="40" y="532">J2</text>
+<circle class="pad" cx="64" cy="563" r="5.5"/>
+<text class="silk" x="56" y="596">CV</text>
+<circle class="pad" cx="156" cy="489" r="5.5"/>
+<text class="silk" x="166" y="494">GATE</text>
+<rect class="smd" x="174" y="502" width="12" height="9"/>
+<rect class="hdr" x="306" y="506" width="24" height="44" rx="2"/>
+<rect class="hdrpin" x="314" y="511" width="8" height="8"/>
+<rect class="hdrpin" x="314" y="525" width="8" height="8"/>
+<rect class="hdrpin" x="314" y="539" width="8" height="8"/>
+<text class="silk" x="338" y="520">USART1</text>
+<rect class="led" x="406" y="512" width="16" height="10" rx="2"/>
+<text class="silk tiny" x="428" y="521">NOTEON</text>
+<rect class="din hl" x="385" y="550" width="132" height="112" rx="6"/>
+<circle class="dinhole" cx="443" cy="606" r="38"/>
+<circle class="dinpin" cx="419" cy="606" r="3"/>
+<circle class="dinpin" cx="426" cy="589" r="3"/>
+<circle class="dinpin" cx="443" cy="582" r="3"/>
+<circle class="dinpin" cx="426" cy="623" r="3"/>
+<circle class="dinpin" cx="443" cy="630" r="3"/>
+<text class="silk" x="483" y="610" text-anchor="middle">THRU</text>
+<rect class="din hl" x="385" y="664" width="132" height="112" rx="6"/>
+<circle class="dinhole" cx="443" cy="720" r="38"/>
+<circle class="dinpin" cx="419" cy="720" r="3"/>
+<circle class="dinpin" cx="426" cy="703" r="3"/>
+<circle class="dinpin" cx="443" cy="696" r="3"/>
+<circle class="dinpin" cx="426" cy="737" r="3"/>
+<circle class="dinpin" cx="443" cy="744" r="3"/>
+<text class="silk" x="483" y="724" text-anchor="middle">IN</text>
+<rect class="hdr" x="201" y="534" width="24" height="86" rx="2"/>
+<rect class="hdrpin" x="209" y="539" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="553" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="567" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="581" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="595" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="609" width="8" height="8"/>
+<text class="silk" x="178" y="560" transform="rotate(-90 178 560)" text-anchor="end">SWD</text>
+<rect class="mcu" x="276" y="584" width="56" height="56" rx="2"/>
+<line class="mcupin" x1="270" y1="590" x2="276" y2="590"/>
+<line class="mcupin" x1="332" y1="590" x2="338" y2="590"/>
+<line class="mcupin" x1="282" y1="578" x2="282" y2="584"/>
+<line class="mcupin" x1="282" y1="640" x2="282" y2="646"/>
+<line class="mcupin" x1="270" y1="596" x2="276" y2="596"/>
+<line class="mcupin" x1="332" y1="596" x2="338" y2="596"/>
+<line class="mcupin" x1="288" y1="578" x2="288" y2="584"/>
+<line class="mcupin" x1="288" y1="640" x2="288" y2="646"/>
+<line class="mcupin" x1="270" y1="602" x2="276" y2="602"/>
+<line class="mcupin" x1="332" y1="602" x2="338" y2="602"/>
+<line class="mcupin" x1="294" y1="578" x2="294" y2="584"/>
+<line class="mcupin" x1="294" y1="640" x2="294" y2="646"/>
+<line class="mcupin" x1="270" y1="608" x2="276" y2="608"/>
+<line class="mcupin" x1="332" y1="608" x2="338" y2="608"/>
+<line class="mcupin" x1="300" y1="578" x2="300" y2="584"/>
+<line class="mcupin" x1="300" y1="640" x2="300" y2="646"/>
+<line class="mcupin" x1="270" y1="614" x2="276" y2="614"/>
+<line class="mcupin" x1="332" y1="614" x2="338" y2="614"/>
+<line class="mcupin" x1="306" y1="578" x2="306" y2="584"/>
+<line class="mcupin" x1="306" y1="640" x2="306" y2="646"/>
+<line class="mcupin" x1="270" y1="620" x2="276" y2="620"/>
+<line class="mcupin" x1="332" y1="620" x2="338" y2="620"/>
+<line class="mcupin" x1="312" y1="578" x2="312" y2="584"/>
+<line class="mcupin" x1="312" y1="640" x2="312" y2="646"/>
+<line class="mcupin" x1="270" y1="626" x2="276" y2="626"/>
+<line class="mcupin" x1="332" y1="626" x2="338" y2="626"/>
+<line class="mcupin" x1="318" y1="578" x2="318" y2="584"/>
+<line class="mcupin" x1="318" y1="640" x2="318" y2="646"/>
+<line class="mcupin" x1="270" y1="632" x2="276" y2="632"/>
+<line class="mcupin" x1="332" y1="632" x2="338" y2="632"/>
+<line class="mcupin" x1="324" y1="578" x2="324" y2="584"/>
+<line class="mcupin" x1="324" y1="640" x2="324" y2="646"/>
+<text class="silk tiny" x="304" y="616" text-anchor="middle">STM32</text>
+<text class="silk tiny" x="304" y="628" text-anchor="middle">F446</text>
+<rect class="smd" x="280" y="664" width="14" height="10"/>
+<circle class="pad" cx="205" cy="624" r="4.5"/>
+<circle class="pad" cx="207" cy="637" r="4.5"/>
+<circle class="pad" cx="210" cy="650" r="4.5"/>
+<circle class="pad" cx="214" cy="663" r="4.5"/>
+<circle class="pad" cx="219" cy="676" r="4.5"/>
+<circle class="pad" cx="226" cy="689" r="4.5"/>
+<circle class="pad" cx="233" cy="702" r="4.5"/>
+<text class="silk tiny" x="244" y="706">J31</text>
+<rect class="button" x="240" y="720" width="40" height="32" rx="3"/>
+<circle class="buttoncap" cx="260" cy="736" r="9"/>
+<text class="silk" x="260" y="772" text-anchor="middle">LEARN</text>
+<rect class="ic" x="340" y="724" width="22" height="16"/>
+<rect class="ic" x="340" y="752" width="22" height="16"/>
+<rect class="ic" x="368" y="772" width="22" height="16"/>
+</g></g>
+<rect class="cropframe" x="40" y="40" width="310.5" height="378.0" rx="12"/>
+<rect class="dev" x="560" y="300" width="310" height="120" rx="10"/>
+<rect class="key" x="575" y="350" width="18" height="58" rx="2"/>
+<rect class="key" x="595" y="350" width="18" height="58" rx="2"/>
+<rect class="key" x="615" y="350" width="18" height="58" rx="2"/>
+<rect class="key" x="635" y="350" width="18" height="58" rx="2"/>
+<rect class="key" x="655" y="350" width="18" height="58" rx="2"/>
+<rect class="key" x="675" y="350" width="18" height="58" rx="2"/>
+<rect class="key" x="695" y="350" width="18" height="58" rx="2"/>
+<rect class="key" x="715" y="350" width="18" height="58" rx="2"/>
+<rect class="key" x="735" y="350" width="18" height="58" rx="2"/>
+<rect class="key" x="755" y="350" width="18" height="58" rx="2"/>
+<rect class="key" x="775" y="350" width="18" height="58" rx="2"/>
+<rect class="key" x="795" y="350" width="18" height="58" rx="2"/>
+<rect class="key" x="815" y="350" width="18" height="58" rx="2"/>
+<rect class="key" x="835" y="350" width="18" height="58" rx="2"/>
+<rect class="keyb" x="588" y="350" width="12" height="34" rx="1"/>
+<rect class="keyb" x="608" y="350" width="12" height="34" rx="1"/>
+<rect class="keyb" x="648" y="350" width="12" height="34" rx="1"/>
+<rect class="keyb" x="668" y="350" width="12" height="34" rx="1"/>
+<rect class="keyb" x="688" y="350" width="12" height="34" rx="1"/>
+<rect class="keyb" x="728" y="350" width="12" height="34" rx="1"/>
+<rect class="keyb" x="748" y="350" width="12" height="34" rx="1"/>
+<rect class="keyb" x="788" y="350" width="12" height="34" rx="1"/>
+<rect class="keyb" x="808" y="350" width="12" height="34" rx="1"/>
+<rect class="keyb" x="828" y="350" width="12" height="34" rx="1"/>
+<text class="devtitle" x="574.0" y="330.0" text-anchor="start">MIDI-клавиатура</text>
+<path class="wire w-midi" d="M333.0,310.0 L530.0,310.0 L530.0,380.0 L560.0,380.0"/>
+<circle class="wireend w-midi" cx="333.0" cy="310.0" r="4"/>
+<circle class="wireend w-midi" cx="560.0" cy="380.0" r="4"/>
+<text class="wlabel halo" x="720.0" y="290.0" text-anchor="middle">MIDI OUT клавиатуры → IN</text>
+<rect class="dev" x="560" y="60" width="310" height="110" rx="10"/>
+<text class="devtitle" x="574" y="86">Другой синт (если нужен)</text>
+<text class="devline" x="574" y="110">получает копию входа</text>
+<text class="devline" x="574" y="130">даже без прошивки</text>
+<path class="wire w-thru" d="M333.0,156.1 L500.0,156.1 L500.0,115.0 L560.0,115.0"/>
+<circle class="wireend w-thru" cx="333.0" cy="156.1" r="4"/>
+<circle class="wireend w-thru" cx="560.0" cy="115.0" r="4"/>
+<text class="wlabel halo" x="720.0" y="200.0" text-anchor="middle">THRU → MIDI IN синта</text>
+<line class="leader" x1="60.0" y1="30.0" x2="229.0" y2="156.1"/>
+<circle class="leaderdot" cx="229.0" cy="156.1" r="3"/>
+<text class="lbl halo" x="66.0" y="35.0" text-anchor="start">верхний — THRU</text>
+<line class="leader" x1="60.0" y1="455.0" x2="229.0" y2="310.0"/>
+<circle class="leaderdot" cx="229.0" cy="310.0" r="3"/>
+<text class="lbl halo" x="66.0" y="460.0" text-anchor="start">нижний — IN</text>
+</svg></div><figcaption>MIDI OUT клавиатуры — в нижний DIN. Верхний DIN (THRU) — копия входа для следующего синта.</figcaption></figure>
+<div class="steps"><h3>Что важно</h3><ul>
+<li><b>IN — нижний</b> разъём, <b>THRU — верхний</b>.</li>
+<li>THRU работает аппаратно, даже если процессор не прошит.</li>
+<li>Всё, что пришло в DIN IN, плата пересылает в компьютер по USB — её можно использовать как MIDI-интерфейс.</li>
+<li>Разъёма MIDI OUT на этой плате нет.</li>
+</ul></div></div></section><section class="job" id="vyhody"><h2>CV, GATE и CLOCK</h2>
+<p class="lede">Выходы — площадки на плате. Припаяй к ним провода или штырьки. Землю для синта возьми с пина 3 разъёма SWD.</p>
+<div class="grid"><figure><div class="scroll"><svg viewBox="0 0 900 450" role="img" aria-label="CV, GATE и CLOCK — площадки на плате; землю берём с пина 3 разъёма SWD" class="diagram">
+<defs><clipPath id="clip-vyhody"><rect x="40" y="40" width="350.0" height="350.0" rx="12"/></clipPath>
+<marker id="arr-vyhody" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<g clip-path="url(#clip-vyhody)"><g transform="translate(26.0 -618.0) scale(1.4)">
+<rect class="pcb" x="0" y="0" width="470" height="825" rx="10"/>
+<circle class="hole" cx="14" cy="14" r="6"/>
+<circle class="hole" cx="456" cy="14" r="6"/>
+<circle class="hole" cx="14" cy="811" r="6"/>
+<circle class="hole" cx="456" cy="811" r="6"/>
+<line class="silkline" x1="8" y1="350" x2="462" y2="350"/>
+<text class="silk" x="150" y="342">MIDI ANALOG FILTER</text>
+<text class="silk" x="330" y="342">PRIBORE PROTOTYPE</text>
+<circle class="cap" cx="112" cy="98" r="27"/>
+<text class="silk tiny" x="112" y="102" text-anchor="middle">220µ</text>
+<circle class="cap" cx="112" cy="300" r="27"/>
+<text class="silk tiny" x="112" y="304" text-anchor="middle">220µ</text>
+<rect class="trimmer" x="142" y="66" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="153" cy="77" r="6"/>
+<rect class="trimmer" x="142" y="272" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="153" cy="283" r="6"/>
+<rect class="trimmer" x="186" y="196" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="197" cy="207" r="6"/>
+<rect class="smd" x="172" y="34" width="16" height="10"/>
+<rect class="ic" x="172" y="52" width="14" height="14"/>
+<rect class="smd" x="198" y="34" width="16" height="10"/>
+<rect class="ic" x="198" y="52" width="14" height="14"/>
+<rect class="smd" x="224" y="34" width="16" height="10"/>
+<rect class="ic" x="224" y="52" width="14" height="14"/>
+<rect class="smd" x="250" y="34" width="16" height="10"/>
+<rect class="ic" x="250" y="52" width="14" height="14"/>
+<rect class="smd" x="276" y="34" width="16" height="10"/>
+<rect class="ic" x="276" y="52" width="14" height="14"/>
+<rect class="smd" x="172" y="242" width="16" height="10"/>
+<rect class="ic" x="172" y="260" width="14" height="14"/>
+<rect class="smd" x="198" y="242" width="16" height="10"/>
+<rect class="ic" x="198" y="260" width="14" height="14"/>
+<rect class="smd" x="224" y="242" width="16" height="10"/>
+<rect class="ic" x="224" y="260" width="14" height="14"/>
+<rect class="smd" x="250" y="242" width="16" height="10"/>
+<rect class="ic" x="250" y="260" width="14" height="14"/>
+<rect class="smd" x="276" y="242" width="16" height="10"/>
+<rect class="ic" x="276" y="260" width="14" height="14"/>
+<rect class="ic" x="62" y="152" width="30" height="22"/>
+<rect class="ic" x="384" y="152" width="30" height="22"/>
+<rect class="jst" x="5" y="102" width="38" height="46" rx="3"/>
+<rect class="jstpin" x="21.0" y="110.5" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="122.0" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="133.5" width="6" height="6"/>
+<rect class="jst" x="5" y="150" width="38" height="46" rx="3"/>
+<rect class="jstpin" x="21.0" y="158.5" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="170.0" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="181.5" width="6" height="6"/>
+<text class="silk" x="50" y="128">L IN</text>
+<text class="silk" x="50" y="176">R IN</text>
+<circle class="pad" cx="100" cy="58" r="5.5"/>
+<text class="silk tiny" x="60" y="48">RES_L CV IN</text>
+<circle class="pad" cx="100" cy="266" r="5.5"/>
+<text class="silk tiny" x="60" y="256">RES_R CV IN</text>
+<rect class="jst" x="241" y="121" width="44" height="62" rx="3"/>
+<rect class="jstpin" x="260.0" y="133.5" width="6" height="6"/>
+<rect class="jstpin" x="260.0" y="149.0" width="6" height="6"/>
+<rect class="jstpin" x="260.0" y="164.5" width="6" height="6"/>
+<text class="silk" x="290" y="158">FILTER</text>
+<circle class="pad" cx="205" cy="166" r="5.5"/>
+<text class="silk tiny" x="166" y="150">FILTER CV IN</text>
+<rect class="jst" x="373" y="50" width="42" height="64" rx="3"/>
+<rect class="jstpin" x="391.0" y="63.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="79.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="95.0" width="6" height="6"/>
+<text class="silk tiny" x="372" y="44">RES L</text>
+<rect class="jst" x="373" y="258" width="42" height="60" rx="3"/>
+<rect class="jstpin" x="391.0" y="270.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="285.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="300.0" width="6" height="6"/>
+<text class="silk tiny" x="372" y="252">RES R</text>
+<rect class="jst" x="428" y="132" width="40" height="42" rx="3"/>
+<rect class="jstpin" x="445.0" y="139.5" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="150.0" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="160.5" width="6" height="6"/>
+<rect class="jst" x="428" y="176" width="40" height="42" rx="3"/>
+<rect class="jstpin" x="445.0" y="183.5" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="194.0" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="204.5" width="6" height="6"/>
+<text class="silk tiny" x="423" y="157" text-anchor="end">L OUT</text>
+<text class="silk tiny" x="423" y="201" text-anchor="end">R OUT</text>
+<rect class="ic" x="96" y="362" width="30" height="22"/>
+<rect class="ic" x="96" y="416" width="30" height="22"/>
+<rect class="ic" x="196" y="372" width="30" height="22"/>
+<rect class="ic" x="196" y="418" width="30" height="22"/>
+<rect class="ic" x="262" y="362" width="30" height="22"/>
+<rect class="ic" x="262" y="410" width="30" height="22"/>
+<rect class="ic" x="146" y="372" width="28" height="20"/>
+<rect class="ic" x="146" y="418" width="28" height="20"/>
+<rect class="powerzone" x="88" y="356" width="236" height="96" rx="6"/>
+<text class="silk tiny" x="206" y="402" text-anchor="middle" opacity=".75">питание ±15 В</text>
+<circle class="pad" cx="351" cy="421" r="5.5"/>
+<text class="silk tiny" x="336" y="412">+VBUS</text>
+<rect class="sc" x="58" y="434" width="30" height="30" rx="3"/>
+<rect class="sc" x="254" y="468" width="28" height="28" rx="3"/>
+<rect class="metal" x="408" y="418" width="86" height="60" rx="4"/>
+<rect class="metalin" x="420" y="428" width="56" height="40" rx="3"/>
+<rect class="silkbox" x="20" y="498" width="124" height="118" rx="4"/>
+<text class="silk" x="26" y="514">FILTER CV</text>
+<rect class="ic" x="92" y="526" width="26" height="34"/>
+<circle class="pad" cx="64" cy="528" r="5.5"/>
+<text class="silk tiny" x="40" y="532">J2</text>
+<circle class="pad hl" cx="64" cy="563" r="5.5"/>
+<text class="silk" x="56" y="596">CV</text>
+<circle class="pad hl" cx="156" cy="489" r="5.5"/>
+<text class="silk" x="166" y="494">GATE</text>
+<rect class="smd" x="174" y="502" width="12" height="9"/>
+<rect class="hdr" x="306" y="506" width="24" height="44" rx="2"/>
+<rect class="hdrpin" x="314" y="511" width="8" height="8"/>
+<rect class="hdrpin" x="314" y="525" width="8" height="8"/>
+<rect class="hdrpin" x="314" y="539" width="8" height="8"/>
+<text class="silk" x="338" y="520">USART1</text>
+<rect class="led" x="406" y="512" width="16" height="10" rx="2"/>
+<text class="silk tiny" x="428" y="521">NOTEON</text>
+<rect class="din" x="385" y="550" width="132" height="112" rx="6"/>
+<circle class="dinhole" cx="443" cy="606" r="38"/>
+<circle class="dinpin" cx="419" cy="606" r="3"/>
+<circle class="dinpin" cx="426" cy="589" r="3"/>
+<circle class="dinpin" cx="443" cy="582" r="3"/>
+<circle class="dinpin" cx="426" cy="623" r="3"/>
+<circle class="dinpin" cx="443" cy="630" r="3"/>
+<text class="silk" x="483" y="610" text-anchor="middle">THRU</text>
+<rect class="din" x="385" y="664" width="132" height="112" rx="6"/>
+<circle class="dinhole" cx="443" cy="720" r="38"/>
+<circle class="dinpin" cx="419" cy="720" r="3"/>
+<circle class="dinpin" cx="426" cy="703" r="3"/>
+<circle class="dinpin" cx="443" cy="696" r="3"/>
+<circle class="dinpin" cx="426" cy="737" r="3"/>
+<circle class="dinpin" cx="443" cy="744" r="3"/>
+<text class="silk" x="483" y="724" text-anchor="middle">IN</text>
+<rect class="hdr hl" x="201" y="534" width="24" height="86" rx="2"/>
+<rect class="hdrpin" x="209" y="539" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="553" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="567" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="581" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="595" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="609" width="8" height="8"/>
+<text class="silk" x="178" y="560" transform="rotate(-90 178 560)" text-anchor="end">SWD</text>
+<rect class="mcu" x="276" y="584" width="56" height="56" rx="2"/>
+<line class="mcupin" x1="270" y1="590" x2="276" y2="590"/>
+<line class="mcupin" x1="332" y1="590" x2="338" y2="590"/>
+<line class="mcupin" x1="282" y1="578" x2="282" y2="584"/>
+<line class="mcupin" x1="282" y1="640" x2="282" y2="646"/>
+<line class="mcupin" x1="270" y1="596" x2="276" y2="596"/>
+<line class="mcupin" x1="332" y1="596" x2="338" y2="596"/>
+<line class="mcupin" x1="288" y1="578" x2="288" y2="584"/>
+<line class="mcupin" x1="288" y1="640" x2="288" y2="646"/>
+<line class="mcupin" x1="270" y1="602" x2="276" y2="602"/>
+<line class="mcupin" x1="332" y1="602" x2="338" y2="602"/>
+<line class="mcupin" x1="294" y1="578" x2="294" y2="584"/>
+<line class="mcupin" x1="294" y1="640" x2="294" y2="646"/>
+<line class="mcupin" x1="270" y1="608" x2="276" y2="608"/>
+<line class="mcupin" x1="332" y1="608" x2="338" y2="608"/>
+<line class="mcupin" x1="300" y1="578" x2="300" y2="584"/>
+<line class="mcupin" x1="300" y1="640" x2="300" y2="646"/>
+<line class="mcupin" x1="270" y1="614" x2="276" y2="614"/>
+<line class="mcupin" x1="332" y1="614" x2="338" y2="614"/>
+<line class="mcupin" x1="306" y1="578" x2="306" y2="584"/>
+<line class="mcupin" x1="306" y1="640" x2="306" y2="646"/>
+<line class="mcupin" x1="270" y1="620" x2="276" y2="620"/>
+<line class="mcupin" x1="332" y1="620" x2="338" y2="620"/>
+<line class="mcupin" x1="312" y1="578" x2="312" y2="584"/>
+<line class="mcupin" x1="312" y1="640" x2="312" y2="646"/>
+<line class="mcupin" x1="270" y1="626" x2="276" y2="626"/>
+<line class="mcupin" x1="332" y1="626" x2="338" y2="626"/>
+<line class="mcupin" x1="318" y1="578" x2="318" y2="584"/>
+<line class="mcupin" x1="318" y1="640" x2="318" y2="646"/>
+<line class="mcupin" x1="270" y1="632" x2="276" y2="632"/>
+<line class="mcupin" x1="332" y1="632" x2="338" y2="632"/>
+<line class="mcupin" x1="324" y1="578" x2="324" y2="584"/>
+<line class="mcupin" x1="324" y1="640" x2="324" y2="646"/>
+<text class="silk tiny" x="304" y="616" text-anchor="middle">STM32</text>
+<text class="silk tiny" x="304" y="628" text-anchor="middle">F446</text>
+<rect class="smd" x="280" y="664" width="14" height="10"/>
+<circle class="pad" cx="205" cy="624" r="4.5"/>
+<circle class="pad" cx="207" cy="637" r="4.5"/>
+<circle class="pad" cx="210" cy="650" r="4.5"/>
+<circle class="pad" cx="214" cy="663" r="4.5"/>
+<circle class="pad" cx="219" cy="676" r="4.5"/>
+<circle class="pad" cx="226" cy="689" r="4.5"/>
+<circle class="pad hl" cx="233" cy="702" r="4.5"/>
+<text class="silk tiny" x="244" y="706">J31</text>
+<rect class="button" x="240" y="720" width="40" height="32" rx="3"/>
+<circle class="buttoncap" cx="260" cy="736" r="9"/>
+<text class="silk" x="260" y="772" text-anchor="middle">LEARN</text>
+<rect class="ic" x="340" y="724" width="22" height="16"/>
+<rect class="ic" x="340" y="752" width="22" height="16"/>
+<rect class="ic" x="368" y="772" width="22" height="16"/>
+</g></g>
+<rect class="cropframe" x="40" y="40" width="350.0" height="350.0" rx="12"/>
+<rect class="dev" x="640" y="110" width="230" height="310" rx="10"/>
+<text class="devtitle" x="656.0" y="140.0" text-anchor="start">Синтезатор / модуль</text>
+<circle class="jack" cx="680" cy="180" r="13"/>
+<circle class="jackin" cx="680" cy="180" r="5"/>
+<text class="pinname" x="702.0" y="185.0" text-anchor="start">CV / 1V/oct</text>
+<circle class="jack" cx="680" cy="240" r="13"/>
+<circle class="jackin" cx="680" cy="240" r="5"/>
+<text class="pinname" x="702.0" y="245.0" text-anchor="start">GATE</text>
+<circle class="jack" cx="680" cy="300" r="13"/>
+<circle class="jackin" cx="680" cy="300" r="5"/>
+<text class="pinname" x="702.0" y="305.0" text-anchor="start">GND (земля)</text>
+<circle class="jack" cx="680" cy="380" r="13"/>
+<circle class="jackin" cx="680" cy="380" r="5"/>
+<text class="pinname" x="702.0" y="385.0" text-anchor="start">CLOCK</text>
+<path class="wire w-cv" d="M115.6,170.2 L78.0,170.2 L78.0,22.0 L580.0,22.0 L580.0,180.0 L667.0,180.0"/>
+<circle class="wireend w-cv" cx="115.6" cy="170.2" r="4"/>
+<circle class="wireend w-cv" cx="667.0" cy="180.0" r="4"/>
+<text class="wlabel halo" x="330.0" y="16.0" text-anchor="middle">CV: 0…10 В</text>
+<path class="wire w-gate" d="M244.4,66.6 L244.4,50.0 L550.0,50.0 L550.0,240.0 L667.0,240.0"/>
+<circle class="wireend w-gate" cx="244.4" cy="66.6" r="4"/>
+<circle class="wireend w-gate" cx="667.0" cy="240.0" r="4"/>
+<text class="wlabel halo" x="400.0" y="44.0" text-anchor="middle">GATE: 0 / 5 В</text>
+<path class="wire w-gnd" d="M324.2,181.4 L510.0,181.4 L510.0,300.0 L667.0,300.0"/>
+<circle class="wireend w-gnd" cx="324.2" cy="181.4" r="4"/>
+<circle class="wireend w-gnd" cx="667.0" cy="300.0" r="4"/>
+<text class="wlabel halo" x="455.0" y="173.4" text-anchor="middle">SWD пин 3 = GND</text>
+<path class="wire w-clock" d="M352.2,364.8 L352.2,420.0 L600.0,420.0 L600.0,380.0 L667.0,380.0"/>
+<circle class="wireend w-clock" cx="352.2" cy="364.8" r="4"/>
+<circle class="wireend w-clock" cx="667.0" cy="380.0" r="4"/>
+<text class="wlabel halo" x="470.0" y="440.0" text-anchor="middle">CLOCK: 3.3 В, импульс вниз</text>
+</svg></div><figcaption>CV — высота ноты 1 В/октаву (или ручка CC), GATE — нота нажата, CLOCK — такт из MIDI Clock.</figcaption></figure>
+<div class="steps"><h3>Что где</h3>
+<table class="pins"><tr><th>Площадка</th><th>Сигнал</th><th>Уровень</th></tr>
+<tr><td>J1 «CV»</td><td>высота ноты</td><td>0…10 В</td></tr>
+<tr><td>J14 «GATE»</td><td>нота нажата</td><td>0 / 5 В</td></tr>
+<tr><td>J31</td><td>CLOCK</td><td>3.3 В, импульс вниз</td></tr>
+<tr><td>J2</td><td>срез фильтра</td><td>только измерять</td></tr></table>
+<h3>Проверка мультиметром</h3>
+<ul><li><code>set jack 5000</code> → на J1 около 5 В</li><li><code>gate on</code> → на J14 около 5 В</li></ul>
+<p class="note">J31 — это голая ножка процессора: 3.3 В и инверсная логика (под будущий транзисторный каскад). Подключай только к входам, которые терпят 3.3 В и не подают напряжение обратно.</p>
+</div></div></section><section class="job" id="filtr"><h2>Фильтр и аудио</h2>
+<p class="lede">Верхняя половина — стерео аналоговый фильтр. Срез управляется ручкой FILTER, процессором (CC74 по умолчанию) и внешним CV — всё складывается.</p>
+<div class="grid wide"><figure><div class="scroll"><svg viewBox="0 0 1110 620" role="img" aria-label="Аудио входит слева, выходит справа; ручки частоты и резонанса — на белые разъёмы" class="diagram">
+<defs><clipPath id="clip-filtr"><rect x="260" y="70" width="570.0" height="422.4" rx="12"/></clipPath>
+<marker id="arr-filtr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<g clip-path="url(#clip-filtr)"><g transform="translate(260.0 70.0) scale(1.2)">
+<rect class="pcb" x="0" y="0" width="470" height="825" rx="10"/>
+<circle class="hole" cx="14" cy="14" r="6"/>
+<circle class="hole" cx="456" cy="14" r="6"/>
+<circle class="hole" cx="14" cy="811" r="6"/>
+<circle class="hole" cx="456" cy="811" r="6"/>
+<line class="silkline" x1="8" y1="350" x2="462" y2="350"/>
+<text class="silk" x="150" y="342">MIDI ANALOG FILTER</text>
+<text class="silk" x="330" y="342">PRIBORE PROTOTYPE</text>
+<circle class="cap" cx="112" cy="98" r="27"/>
+<text class="silk tiny" x="112" y="102" text-anchor="middle">220µ</text>
+<circle class="cap" cx="112" cy="300" r="27"/>
+<text class="silk tiny" x="112" y="304" text-anchor="middle">220µ</text>
+<rect class="trimmer hl" x="142" y="66" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="153" cy="77" r="6"/>
+<rect class="trimmer hl" x="142" y="272" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="153" cy="283" r="6"/>
+<rect class="trimmer hl" x="186" y="196" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="197" cy="207" r="6"/>
+<rect class="smd" x="172" y="34" width="16" height="10"/>
+<rect class="ic" x="172" y="52" width="14" height="14"/>
+<rect class="smd" x="198" y="34" width="16" height="10"/>
+<rect class="ic" x="198" y="52" width="14" height="14"/>
+<rect class="smd" x="224" y="34" width="16" height="10"/>
+<rect class="ic" x="224" y="52" width="14" height="14"/>
+<rect class="smd" x="250" y="34" width="16" height="10"/>
+<rect class="ic" x="250" y="52" width="14" height="14"/>
+<rect class="smd" x="276" y="34" width="16" height="10"/>
+<rect class="ic" x="276" y="52" width="14" height="14"/>
+<rect class="smd" x="172" y="242" width="16" height="10"/>
+<rect class="ic" x="172" y="260" width="14" height="14"/>
+<rect class="smd" x="198" y="242" width="16" height="10"/>
+<rect class="ic" x="198" y="260" width="14" height="14"/>
+<rect class="smd" x="224" y="242" width="16" height="10"/>
+<rect class="ic" x="224" y="260" width="14" height="14"/>
+<rect class="smd" x="250" y="242" width="16" height="10"/>
+<rect class="ic" x="250" y="260" width="14" height="14"/>
+<rect class="smd" x="276" y="242" width="16" height="10"/>
+<rect class="ic" x="276" y="260" width="14" height="14"/>
+<rect class="ic" x="62" y="152" width="30" height="22"/>
+<rect class="ic" x="384" y="152" width="30" height="22"/>
+<rect class="jst hl" x="5" y="102" width="38" height="46" rx="3"/>
+<rect class="jstpin" x="21.0" y="110.5" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="122.0" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="133.5" width="6" height="6"/>
+<rect class="jst hl" x="5" y="150" width="38" height="46" rx="3"/>
+<rect class="jstpin" x="21.0" y="158.5" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="170.0" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="181.5" width="6" height="6"/>
+<text class="silk" x="50" y="128">L IN</text>
+<text class="silk" x="50" y="176">R IN</text>
+<circle class="pad hl" cx="100" cy="58" r="5.5"/>
+<text class="silk tiny" x="60" y="48">RES_L CV IN</text>
+<circle class="pad hl" cx="100" cy="266" r="5.5"/>
+<text class="silk tiny" x="60" y="256">RES_R CV IN</text>
+<rect class="jst hl" x="241" y="121" width="44" height="62" rx="3"/>
+<rect class="jstpin" x="260.0" y="133.5" width="6" height="6"/>
+<rect class="jstpin" x="260.0" y="149.0" width="6" height="6"/>
+<rect class="jstpin" x="260.0" y="164.5" width="6" height="6"/>
+<text class="silk" x="290" y="158">FILTER</text>
+<circle class="pad hl" cx="205" cy="166" r="5.5"/>
+<text class="silk tiny" x="166" y="150">FILTER CV IN</text>
+<rect class="jst hl" x="373" y="50" width="42" height="64" rx="3"/>
+<rect class="jstpin" x="391.0" y="63.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="79.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="95.0" width="6" height="6"/>
+<text class="silk tiny" x="372" y="44">RES L</text>
+<rect class="jst hl" x="373" y="258" width="42" height="60" rx="3"/>
+<rect class="jstpin" x="391.0" y="270.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="285.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="300.0" width="6" height="6"/>
+<text class="silk tiny" x="372" y="252">RES R</text>
+<rect class="jst hl" x="428" y="132" width="40" height="42" rx="3"/>
+<rect class="jstpin" x="445.0" y="139.5" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="150.0" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="160.5" width="6" height="6"/>
+<rect class="jst hl" x="428" y="176" width="40" height="42" rx="3"/>
+<rect class="jstpin" x="445.0" y="183.5" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="194.0" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="204.5" width="6" height="6"/>
+<text class="silk tiny" x="423" y="157" text-anchor="end">L OUT</text>
+<text class="silk tiny" x="423" y="201" text-anchor="end">R OUT</text>
+<rect class="ic" x="96" y="362" width="30" height="22"/>
+<rect class="ic" x="96" y="416" width="30" height="22"/>
+<rect class="ic" x="196" y="372" width="30" height="22"/>
+<rect class="ic" x="196" y="418" width="30" height="22"/>
+<rect class="ic" x="262" y="362" width="30" height="22"/>
+<rect class="ic" x="262" y="410" width="30" height="22"/>
+<rect class="ic" x="146" y="372" width="28" height="20"/>
+<rect class="ic" x="146" y="418" width="28" height="20"/>
+<rect class="powerzone" x="88" y="356" width="236" height="96" rx="6"/>
+<text class="silk tiny" x="206" y="402" text-anchor="middle" opacity=".75">питание ±15 В</text>
+<circle class="pad" cx="351" cy="421" r="5.5"/>
+<text class="silk tiny" x="336" y="412">+VBUS</text>
+<rect class="sc" x="58" y="434" width="30" height="30" rx="3"/>
+<rect class="sc" x="254" y="468" width="28" height="28" rx="3"/>
+<rect class="metal" x="408" y="418" width="86" height="60" rx="4"/>
+<rect class="metalin" x="420" y="428" width="56" height="40" rx="3"/>
+<rect class="silkbox" x="20" y="498" width="124" height="118" rx="4"/>
+<text class="silk" x="26" y="514">FILTER CV</text>
+<rect class="ic" x="92" y="526" width="26" height="34"/>
+<circle class="pad" cx="64" cy="528" r="5.5"/>
+<text class="silk tiny" x="40" y="532">J2</text>
+<circle class="pad" cx="64" cy="563" r="5.5"/>
+<text class="silk" x="56" y="596">CV</text>
+<circle class="pad" cx="156" cy="489" r="5.5"/>
+<text class="silk" x="166" y="494">GATE</text>
+<rect class="smd" x="174" y="502" width="12" height="9"/>
+<rect class="hdr" x="306" y="506" width="24" height="44" rx="2"/>
+<rect class="hdrpin" x="314" y="511" width="8" height="8"/>
+<rect class="hdrpin" x="314" y="525" width="8" height="8"/>
+<rect class="hdrpin" x="314" y="539" width="8" height="8"/>
+<text class="silk" x="338" y="520">USART1</text>
+<rect class="led" x="406" y="512" width="16" height="10" rx="2"/>
+<text class="silk tiny" x="428" y="521">NOTEON</text>
+<rect class="din" x="385" y="550" width="132" height="112" rx="6"/>
+<circle class="dinhole" cx="443" cy="606" r="38"/>
+<circle class="dinpin" cx="419" cy="606" r="3"/>
+<circle class="dinpin" cx="426" cy="589" r="3"/>
+<circle class="dinpin" cx="443" cy="582" r="3"/>
+<circle class="dinpin" cx="426" cy="623" r="3"/>
+<circle class="dinpin" cx="443" cy="630" r="3"/>
+<text class="silk" x="483" y="610" text-anchor="middle">THRU</text>
+<rect class="din" x="385" y="664" width="132" height="112" rx="6"/>
+<circle class="dinhole" cx="443" cy="720" r="38"/>
+<circle class="dinpin" cx="419" cy="720" r="3"/>
+<circle class="dinpin" cx="426" cy="703" r="3"/>
+<circle class="dinpin" cx="443" cy="696" r="3"/>
+<circle class="dinpin" cx="426" cy="737" r="3"/>
+<circle class="dinpin" cx="443" cy="744" r="3"/>
+<text class="silk" x="483" y="724" text-anchor="middle">IN</text>
+<rect class="hdr" x="201" y="534" width="24" height="86" rx="2"/>
+<rect class="hdrpin" x="209" y="539" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="553" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="567" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="581" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="595" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="609" width="8" height="8"/>
+<text class="silk" x="178" y="560" transform="rotate(-90 178 560)" text-anchor="end">SWD</text>
+<rect class="mcu" x="276" y="584" width="56" height="56" rx="2"/>
+<line class="mcupin" x1="270" y1="590" x2="276" y2="590"/>
+<line class="mcupin" x1="332" y1="590" x2="338" y2="590"/>
+<line class="mcupin" x1="282" y1="578" x2="282" y2="584"/>
+<line class="mcupin" x1="282" y1="640" x2="282" y2="646"/>
+<line class="mcupin" x1="270" y1="596" x2="276" y2="596"/>
+<line class="mcupin" x1="332" y1="596" x2="338" y2="596"/>
+<line class="mcupin" x1="288" y1="578" x2="288" y2="584"/>
+<line class="mcupin" x1="288" y1="640" x2="288" y2="646"/>
+<line class="mcupin" x1="270" y1="602" x2="276" y2="602"/>
+<line class="mcupin" x1="332" y1="602" x2="338" y2="602"/>
+<line class="mcupin" x1="294" y1="578" x2="294" y2="584"/>
+<line class="mcupin" x1="294" y1="640" x2="294" y2="646"/>
+<line class="mcupin" x1="270" y1="608" x2="276" y2="608"/>
+<line class="mcupin" x1="332" y1="608" x2="338" y2="608"/>
+<line class="mcupin" x1="300" y1="578" x2="300" y2="584"/>
+<line class="mcupin" x1="300" y1="640" x2="300" y2="646"/>
+<line class="mcupin" x1="270" y1="614" x2="276" y2="614"/>
+<line class="mcupin" x1="332" y1="614" x2="338" y2="614"/>
+<line class="mcupin" x1="306" y1="578" x2="306" y2="584"/>
+<line class="mcupin" x1="306" y1="640" x2="306" y2="646"/>
+<line class="mcupin" x1="270" y1="620" x2="276" y2="620"/>
+<line class="mcupin" x1="332" y1="620" x2="338" y2="620"/>
+<line class="mcupin" x1="312" y1="578" x2="312" y2="584"/>
+<line class="mcupin" x1="312" y1="640" x2="312" y2="646"/>
+<line class="mcupin" x1="270" y1="626" x2="276" y2="626"/>
+<line class="mcupin" x1="332" y1="626" x2="338" y2="626"/>
+<line class="mcupin" x1="318" y1="578" x2="318" y2="584"/>
+<line class="mcupin" x1="318" y1="640" x2="318" y2="646"/>
+<line class="mcupin" x1="270" y1="632" x2="276" y2="632"/>
+<line class="mcupin" x1="332" y1="632" x2="338" y2="632"/>
+<line class="mcupin" x1="324" y1="578" x2="324" y2="584"/>
+<line class="mcupin" x1="324" y1="640" x2="324" y2="646"/>
+<text class="silk tiny" x="304" y="616" text-anchor="middle">STM32</text>
+<text class="silk tiny" x="304" y="628" text-anchor="middle">F446</text>
+<rect class="smd" x="280" y="664" width="14" height="10"/>
+<circle class="pad" cx="205" cy="624" r="4.5"/>
+<circle class="pad" cx="207" cy="637" r="4.5"/>
+<circle class="pad" cx="210" cy="650" r="4.5"/>
+<circle class="pad" cx="214" cy="663" r="4.5"/>
+<circle class="pad" cx="219" cy="676" r="4.5"/>
+<circle class="pad" cx="226" cy="689" r="4.5"/>
+<circle class="pad" cx="233" cy="702" r="4.5"/>
+<text class="silk tiny" x="244" y="706">J31</text>
+<rect class="button" x="240" y="720" width="40" height="32" rx="3"/>
+<circle class="buttoncap" cx="260" cy="736" r="9"/>
+<text class="silk" x="260" y="772" text-anchor="middle">LEARN</text>
+<rect class="ic" x="340" y="724" width="22" height="16"/>
+<rect class="ic" x="340" y="752" width="22" height="16"/>
+<rect class="ic" x="368" y="772" width="22" height="16"/>
+<circle class="protohole" cx="26" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="40" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="54" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="68" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="82" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="96" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="110" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="124" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="138" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="152" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="166" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="180" cy="632.0" r="3.2"/>
+<circle class="protohole" cx="26" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="40" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="54" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="68" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="82" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="96" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="110" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="124" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="138" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="152" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="166" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="180" cy="645.5" r="3.2"/>
+<circle class="protohole" cx="26" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="40" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="54" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="68" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="82" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="96" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="110" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="124" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="138" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="152" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="166" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="180" cy="659.0" r="3.2"/>
+<circle class="protohole" cx="26" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="40" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="54" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="68" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="82" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="96" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="110" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="124" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="138" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="152" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="166" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="180" cy="672.5" r="3.2"/>
+<circle class="protohole" cx="26" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="40" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="54" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="68" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="82" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="96" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="110" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="124" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="138" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="152" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="166" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="180" cy="686.0" r="3.2"/>
+<circle class="protohole" cx="26" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="40" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="54" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="68" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="82" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="96" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="110" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="124" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="138" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="152" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="166" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="180" cy="699.5" r="3.2"/>
+<circle class="protohole" cx="26" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="40" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="54" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="68" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="82" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="96" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="110" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="124" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="138" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="152" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="166" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="180" cy="713.0" r="3.2"/>
+<circle class="protohole" cx="26" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="40" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="54" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="68" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="82" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="96" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="110" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="124" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="138" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="152" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="166" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="180" cy="726.5" r="3.2"/>
+<circle class="protohole" cx="26" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="40" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="54" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="68" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="82" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="96" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="110" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="124" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="138" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="152" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="166" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="180" cy="740.0" r="3.2"/>
+<circle class="protohole" cx="26" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="40" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="54" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="68" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="82" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="96" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="110" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="124" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="138" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="152" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="166" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="180" cy="753.5" r="3.2"/>
+<circle class="protohole" cx="26" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="40" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="54" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="68" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="82" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="96" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="110" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="124" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="138" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="152" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="166" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="180" cy="767.0" r="3.2"/>
+<circle class="protohole" cx="26" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="40" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="54" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="68" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="82" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="96" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="110" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="124" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="138" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="152" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="166" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="180" cy="780.5" r="3.2"/>
+<circle class="protohole" cx="26" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="40" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="54" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="68" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="82" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="96" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="110" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="124" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="138" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="152" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="166" cy="794.0" r="3.2"/>
+<circle class="protohole" cx="180" cy="794.0" r="3.2"/>
+</g></g>
+<rect class="cropframe" x="260" y="70" width="570.0" height="422.4" rx="12"/>
+<rect class="dev" x="20" y="200" width="180" height="100" rx="10"/>
+<text class="devtitle" x="34" y="226">Источник звука</text>
+<text class="devline" x="34" y="250">линейный уровень</text>
+<text class="devline" x="34" y="270">L и R</text>
+<path class="wire w-audio" d="M200.0,232.0 L232.0,232.0 L232.0,220.0 L266.0,220.0"/>
+<circle class="wireend w-audio" cx="200.0" cy="232.0" r="4"/>
+<circle class="wireend w-audio" cx="266.0" cy="220.0" r="4"/>
+<path class="wire w-audio" d="M200.0,268.0 L244.0,268.0 L244.0,277.6 L266.0,277.6"/>
+<circle class="wireend w-audio" cx="200.0" cy="268.0" r="4"/>
+<circle class="wireend w-audio" cx="266.0" cy="277.6" r="4"/>
+<rect class="dev" x="900" y="235" width="180" height="100" rx="10"/>
+<text class="devtitle" x="914" y="261">Микшер</text>
+<text class="devline" x="914" y="285">вход L и R</text>
+<path class="wire w-audio" d="M821.6,253.6 L870.0,253.6 L870.0,268.0 L900.0,268.0"/>
+<circle class="wireend w-audio" cx="821.6" cy="253.6" r="4"/>
+<circle class="wireend w-audio" cx="900.0" cy="268.0" r="4"/>
+<path class="wire w-audio" d="M821.6,306.4 L884.0,306.4 L884.0,300.0 L900.0,300.0"/>
+<circle class="wireend w-audio" cx="821.6" cy="306.4" r="4"/>
+<circle class="wireend w-audio" cx="900.0" cy="300.0" r="4"/>
+<circle class="pot" cx="640" cy="560" r="24"/><line class="potline" x1="640" y1="560" x2="652" y2="541"/>
+<text class="lbl" x="680.0" y="556.0" text-anchor="start">FILTER: потенциометр 10 кОм (B10K)</text>
+<text class="lblsub" x="680.0" y="576.0" text-anchor="start">средний вывод — на средний пин разъёма</text>
+<path class="wire w-pot" d="M602.0,252.4 L640.0,252.4 L640.0,536.0"/>
+<circle class="wireend w-pot" cx="602.0" cy="252.4" r="4"/>
+<circle class="wireend w-pot" cx="640.0" cy="536.0" r="4"/>
+<circle class="pot" cx="990" cy="120" r="22"/><line class="potline" x1="990" y1="120" x2="1000" y2="103"/>
+<path class="wire w-pot" d="M758.0,168.4 L950.0,168.4 L950.0,120.0 L968.0,120.0"/>
+<circle class="wireend w-pot" cx="758.0" cy="168.4" r="4"/>
+<circle class="wireend w-pot" cx="968.0" cy="120.0" r="4"/>
+<text class="lblsub" x="990.0" y="164.0" text-anchor="middle">RES L: 10 кОм</text>
+<circle class="pot" cx="990" cy="470" r="22"/><line class="potline" x1="990" y1="470" x2="1000" y2="453"/>
+<path class="wire w-pot" d="M758.0,415.6 L950.0,415.6 L950.0,470.0 L968.0,470.0"/>
+<circle class="wireend w-pot" cx="758.0" cy="415.6" r="4"/>
+<circle class="wireend w-pot" cx="968.0" cy="470.0" r="4"/>
+<text class="lblsub" x="990.0" y="514.0" text-anchor="middle">RES R: 10 кОм</text>
+<line class="leader" x1="240.0" y1="140.0" x2="380.0" y2="139.6"/>
+<circle class="leaderdot" cx="380.0" cy="139.6" r="3"/>
+<text class="lbl halo" x="234.0" y="145.0" text-anchor="end">RES_L CV IN</text>
+<text class="lblsub halo" x="234.0" y="162.0" text-anchor="end">CV резонанса L</text>
+<line class="leader" x1="240.0" y1="360.0" x2="506.0" y2="269.2"/>
+<circle class="leaderdot" cx="506.0" cy="269.2" r="3"/>
+<text class="lbl halo" x="234.0" y="365.0" text-anchor="end">FILTER CV IN</text>
+<text class="lblsub halo" x="234.0" y="382.0" text-anchor="end">внешний CV на срез</text>
+<line class="leader" x1="240.0" y1="420.0" x2="380.0" y2="389.2"/>
+<circle class="leaderdot" cx="380.0" cy="389.2" r="3"/>
+<text class="lbl halo" x="234.0" y="425.0" text-anchor="end">RES_R CV IN</text>
+<text class="lblsub halo" x="234.0" y="442.0" text-anchor="end">CV резонанса R</text>
+<line class="leader" x1="600.0" y1="34.0" x2="443.6" y2="162.4"/>
+<circle class="leaderdot" cx="443.6" cy="162.4" r="3"/>
+<text class="lbl halo" x="606.0" y="39.0" text-anchor="start">подстроечники — не трогать без нужды</text>
+</svg></div><figcaption>Звук входит в L IN / R IN, выходит из L OUT / R OUT. На белые разъёмы FILTER, RES L, RES R ставятся потенциометры 10 кОм.</figcaption></figure>
+<div class="steps"><ul>
+<li>Распиновку белых разъёмов проверь прозвонкой: земляной контакт звонится с землёй (пин 3 SWD).</li>
+<li>Подстроечные резисторы выставлены при сборке — крути их, только если знаешь, что настраиваешь.</li>
+</ul></div></div></section><section class="job" id="learn"><h2>Кнопка LEARN и светодиод NOTEON</h2>
+<p class="lede">Что произойдёт, зависит от того, сколько держать кнопку. Отсчёт идёт с момента нажатия.</p>
+<div class="grid wide"><figure><div class="scroll"><svg viewBox="0 0 920 330" role="img" aria-label="Что делает кнопка LEARN в зависимости от времени удержания" class="diagram">
+<line class="axis" x1="60" y1="200" x2="880" y2="200"/>
+<line class="tick" x1="60.0" y1="200" x2="60.0" y2="214"/>
+<text class="ticklbl" x="60.0" y="232" text-anchor="middle">0 с</text>
+<line class="tick" x1="111.2" y1="200" x2="111.2" y2="208"/>
+<text class="ticklbl" x="111.2" y="232" text-anchor="middle">1 с</text>
+<line class="tick" x1="162.5" y1="200" x2="162.5" y2="208"/>
+<line class="tick" x1="213.8" y1="200" x2="213.8" y2="208"/>
+<text class="ticklbl" x="213.8" y="232" text-anchor="middle">3 с</text>
+<line class="tick" x1="265.0" y1="200" x2="265.0" y2="208"/>
+<line class="tick" x1="316.2" y1="200" x2="316.2" y2="214"/>
+<line class="tick" x1="367.5" y1="200" x2="367.5" y2="208"/>
+<line class="tick" x1="418.8" y1="200" x2="418.8" y2="208"/>
+<line class="tick" x1="470.0" y1="200" x2="470.0" y2="208"/>
+<text class="ticklbl" x="470.0" y="232" text-anchor="middle">8 с</text>
+<line class="tick" x1="521.2" y1="200" x2="521.2" y2="208"/>
+<line class="tick" x1="572.5" y1="200" x2="572.5" y2="214"/>
+<line class="tick" x1="623.8" y1="200" x2="623.8" y2="208"/>
+<line class="tick" x1="675.0" y1="200" x2="675.0" y2="208"/>
+<line class="tick" x1="726.2" y1="200" x2="726.2" y2="208"/>
+<line class="tick" x1="777.5" y1="200" x2="777.5" y2="208"/>
+<line class="tick" x1="828.8" y1="200" x2="828.8" y2="214"/>
+<text class="ticklbl" x="828.8" y="232" text-anchor="middle">15 с</text>
+<line class="tick" x1="880.0" y1="200" x2="880.0" y2="208"/>
+<rect class="zone z1" x="60.0" y="168" width="51.2" height="32" rx="4"/>
+<rect class="zone z2" x="213.8" y="168" width="256.2" height="32" rx="4"/>
+<rect class="zone z3" x="470.0" y="168" width="358.8" height="32" rx="4"/>
+<rect class="zone z4" x="828.8" y="168" width="51.2" height="32" rx="4"/>
+<line class="zonemark" x1="60.0" y1="26" x2="60.0" y2="168"/>
+<text class="lblsub" x="66.0" y="40" text-anchor="start">отпустить до 1 с:</text>
+<text class="lbl" x="66.0" y="62" text-anchor="start">обучение CC для фильтра</text>
+<text class="lblsub" x="66.0" y="82" text-anchor="start">ещё нажатие — для гнезда CV</text>
+<line class="zonemark" x1="213.8" y1="94" x2="213.8" y2="168"/>
+<text class="lblsub" x="219.8" y="108" text-anchor="start">держать 3 с:</text>
+<text class="lbl" x="219.8" y="130" text-anchor="start">обучение MIDI-канала</text>
+<text class="lblsub" x="219.8" y="150" text-anchor="start">нажми ноту на клавиатуре</text>
+<line class="zonemark" x1="470.0" y1="26" x2="470.0" y2="168"/>
+<text class="lblsub" x="476.0" y="40" text-anchor="start">держать 8 с:</text>
+<text class="lbl" x="476.0" y="62" text-anchor="start">Omni — все каналы</text>
+<line class="zonemark" x1="828.8" y1="94" x2="828.8" y2="168"/>
+<text class="lblsub" x="880.0" y="108" text-anchor="end">15 с:</text>
+<text class="lbl" x="880.0" y="130" text-anchor="end">заводские настройки</text>
+<text class="lblsub" x="60" y="280">Держать кнопку, втыкая USB → режим обновления прошивки (это отдельно, до запуска).</text>
+<text class="lblsub" x="60" y="304">Обучение само отменяется через 10 с; всё выученное сразу сохраняется.</text>
+</svg></div><figcaption>Шкала удержания кнопки: каждая отметка включает следующий режим.</figcaption></figure>
+<figure><div class="scroll"><svg viewBox="0 0 920 250" role="img" aria-label="Как мигает светодиод NOTEON в разных режимах" class="diagram">
+<text class="lbl" x="280" y="45" text-anchor="end">Нота нажата</text>
+<line class="axis faint" x1="300" y1="50" x2="880" y2="50"/>
+<rect class="ledon" x="300.0" y="32" width="348.0" height="18" rx="3"/>
+<text class="lbl" x="280" y="87" text-anchor="end">Обучение CC (фильтр)</text>
+<line class="axis faint" x1="300" y1="92" x2="880" y2="92"/>
+<rect class="ledon" x="300.0" y="74" width="58.0" height="18" rx="3"/>
+<rect class="ledon" x="416.0" y="74" width="58.0" height="18" rx="3"/>
+<rect class="ledon" x="532.0" y="74" width="58.0" height="18" rx="3"/>
+<text class="lbl" x="280" y="129" text-anchor="end">Обучение CC (гнездо CV)</text>
+<line class="axis faint" x1="300" y1="134" x2="880" y2="134"/>
+<rect class="ledon" x="300.0" y="116" width="43.5" height="18" rx="3"/>
+<rect class="ledon" x="387.0" y="116" width="43.5" height="18" rx="3"/>
+<rect class="ledon" x="648.0" y="116" width="43.5" height="18" rx="3"/>
+<text class="lbl" x="280" y="171" text-anchor="end">Обучение канала</text>
+<line class="axis faint" x1="300" y1="176" x2="880" y2="176"/>
+<rect class="ledon" x="300.0" y="158" width="290.0" height="18" rx="3"/>
+<text class="lbl" x="280" y="213" text-anchor="end">Режим обновления</text>
+<line class="axis faint" x1="300" y1="218" x2="880" y2="218"/>
+<rect class="ledon" x="300.0" y="200" width="290.0" height="18" rx="3"/>
+<text class="ticklbl" x="300" y="242">0</text>
+<text class="ticklbl" x="880" y="242" text-anchor="end">1 секунда</text>
+</svg></div><figcaption>Как мигает NOTEON: по нему видно, в каком режиме плата.</figcaption></figure></div></section><section class="job" id="uart"><h2>Запасная консоль USART1</h2>
+<p class="lede">Нужна, только если USB не завёлся. Понадобится отдельный USB-UART переходник на 3.3 В — ST-Link так не умеет.</p>
+<div class="grid"><figure><div class="scroll"><svg viewBox="0 0 860 330" role="img" aria-label="Запасная консоль: USB-UART переходник на 3.3 В к разъёму USART1, TX и RX крест-накрест" class="diagram">
+<defs><clipPath id="clip-uart"><rect x="360" y="40" width="462.0" height="273.0" rx="12"/></clipPath>
+<marker id="arr-uart" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<g clip-path="url(#clip-uart)"><g transform="translate(-165.0 -947.0) scale(2.1)">
+<rect class="pcb" x="0" y="0" width="470" height="825" rx="10"/>
+<circle class="hole" cx="14" cy="14" r="6"/>
+<circle class="hole" cx="456" cy="14" r="6"/>
+<circle class="hole" cx="14" cy="811" r="6"/>
+<circle class="hole" cx="456" cy="811" r="6"/>
+<line class="silkline" x1="8" y1="350" x2="462" y2="350"/>
+<text class="silk" x="150" y="342">MIDI ANALOG FILTER</text>
+<text class="silk" x="330" y="342">PRIBORE PROTOTYPE</text>
+<circle class="cap" cx="112" cy="98" r="27"/>
+<text class="silk tiny" x="112" y="102" text-anchor="middle">220µ</text>
+<circle class="cap" cx="112" cy="300" r="27"/>
+<text class="silk tiny" x="112" y="304" text-anchor="middle">220µ</text>
+<rect class="trimmer" x="142" y="66" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="153" cy="77" r="6"/>
+<rect class="trimmer" x="142" y="272" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="153" cy="283" r="6"/>
+<rect class="trimmer" x="186" y="196" width="22" height="22" rx="3"/>
+<circle class="trimknob" cx="197" cy="207" r="6"/>
+<rect class="smd" x="172" y="34" width="16" height="10"/>
+<rect class="ic" x="172" y="52" width="14" height="14"/>
+<rect class="smd" x="198" y="34" width="16" height="10"/>
+<rect class="ic" x="198" y="52" width="14" height="14"/>
+<rect class="smd" x="224" y="34" width="16" height="10"/>
+<rect class="ic" x="224" y="52" width="14" height="14"/>
+<rect class="smd" x="250" y="34" width="16" height="10"/>
+<rect class="ic" x="250" y="52" width="14" height="14"/>
+<rect class="smd" x="276" y="34" width="16" height="10"/>
+<rect class="ic" x="276" y="52" width="14" height="14"/>
+<rect class="smd" x="172" y="242" width="16" height="10"/>
+<rect class="ic" x="172" y="260" width="14" height="14"/>
+<rect class="smd" x="198" y="242" width="16" height="10"/>
+<rect class="ic" x="198" y="260" width="14" height="14"/>
+<rect class="smd" x="224" y="242" width="16" height="10"/>
+<rect class="ic" x="224" y="260" width="14" height="14"/>
+<rect class="smd" x="250" y="242" width="16" height="10"/>
+<rect class="ic" x="250" y="260" width="14" height="14"/>
+<rect class="smd" x="276" y="242" width="16" height="10"/>
+<rect class="ic" x="276" y="260" width="14" height="14"/>
+<rect class="ic" x="62" y="152" width="30" height="22"/>
+<rect class="ic" x="384" y="152" width="30" height="22"/>
+<rect class="jst" x="5" y="102" width="38" height="46" rx="3"/>
+<rect class="jstpin" x="21.0" y="110.5" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="122.0" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="133.5" width="6" height="6"/>
+<rect class="jst" x="5" y="150" width="38" height="46" rx="3"/>
+<rect class="jstpin" x="21.0" y="158.5" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="170.0" width="6" height="6"/>
+<rect class="jstpin" x="21.0" y="181.5" width="6" height="6"/>
+<text class="silk" x="50" y="128">L IN</text>
+<text class="silk" x="50" y="176">R IN</text>
+<circle class="pad" cx="100" cy="58" r="5.5"/>
+<text class="silk tiny" x="60" y="48">RES_L CV IN</text>
+<circle class="pad" cx="100" cy="266" r="5.5"/>
+<text class="silk tiny" x="60" y="256">RES_R CV IN</text>
+<rect class="jst" x="241" y="121" width="44" height="62" rx="3"/>
+<rect class="jstpin" x="260.0" y="133.5" width="6" height="6"/>
+<rect class="jstpin" x="260.0" y="149.0" width="6" height="6"/>
+<rect class="jstpin" x="260.0" y="164.5" width="6" height="6"/>
+<text class="silk" x="290" y="158">FILTER</text>
+<circle class="pad" cx="205" cy="166" r="5.5"/>
+<text class="silk tiny" x="166" y="150">FILTER CV IN</text>
+<rect class="jst" x="373" y="50" width="42" height="64" rx="3"/>
+<rect class="jstpin" x="391.0" y="63.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="79.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="95.0" width="6" height="6"/>
+<text class="silk tiny" x="372" y="44">RES L</text>
+<rect class="jst" x="373" y="258" width="42" height="60" rx="3"/>
+<rect class="jstpin" x="391.0" y="270.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="285.0" width="6" height="6"/>
+<rect class="jstpin" x="391.0" y="300.0" width="6" height="6"/>
+<text class="silk tiny" x="372" y="252">RES R</text>
+<rect class="jst" x="428" y="132" width="40" height="42" rx="3"/>
+<rect class="jstpin" x="445.0" y="139.5" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="150.0" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="160.5" width="6" height="6"/>
+<rect class="jst" x="428" y="176" width="40" height="42" rx="3"/>
+<rect class="jstpin" x="445.0" y="183.5" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="194.0" width="6" height="6"/>
+<rect class="jstpin" x="445.0" y="204.5" width="6" height="6"/>
+<text class="silk tiny" x="423" y="157" text-anchor="end">L OUT</text>
+<text class="silk tiny" x="423" y="201" text-anchor="end">R OUT</text>
+<rect class="ic" x="96" y="362" width="30" height="22"/>
+<rect class="ic" x="96" y="416" width="30" height="22"/>
+<rect class="ic" x="196" y="372" width="30" height="22"/>
+<rect class="ic" x="196" y="418" width="30" height="22"/>
+<rect class="ic" x="262" y="362" width="30" height="22"/>
+<rect class="ic" x="262" y="410" width="30" height="22"/>
+<rect class="ic" x="146" y="372" width="28" height="20"/>
+<rect class="ic" x="146" y="418" width="28" height="20"/>
+<rect class="powerzone" x="88" y="356" width="236" height="96" rx="6"/>
+<text class="silk tiny" x="206" y="402" text-anchor="middle" opacity=".75">питание ±15 В</text>
+<circle class="pad" cx="351" cy="421" r="5.5"/>
+<text class="silk tiny" x="336" y="412">+VBUS</text>
+<rect class="sc" x="58" y="434" width="30" height="30" rx="3"/>
+<rect class="sc" x="254" y="468" width="28" height="28" rx="3"/>
+<rect class="metal" x="408" y="418" width="86" height="60" rx="4"/>
+<rect class="metalin" x="420" y="428" width="56" height="40" rx="3"/>
+<rect class="silkbox" x="20" y="498" width="124" height="118" rx="4"/>
+<text class="silk" x="26" y="514">FILTER CV</text>
+<rect class="ic" x="92" y="526" width="26" height="34"/>
+<circle class="pad" cx="64" cy="528" r="5.5"/>
+<text class="silk tiny" x="40" y="532">J2</text>
+<circle class="pad" cx="64" cy="563" r="5.5"/>
+<text class="silk" x="56" y="596">CV</text>
+<circle class="pad" cx="156" cy="489" r="5.5"/>
+<text class="silk" x="166" y="494">GATE</text>
+<rect class="smd" x="174" y="502" width="12" height="9"/>
+<rect class="hdr hl" x="306" y="506" width="24" height="44" rx="2"/>
+<rect class="hdrpin" x="314" y="511" width="8" height="8"/>
+<rect class="hdrpin" x="314" y="525" width="8" height="8"/>
+<rect class="hdrpin" x="314" y="539" width="8" height="8"/>
+<text class="silk" x="338" y="520">USART1</text>
+<rect class="led" x="406" y="512" width="16" height="10" rx="2"/>
+<text class="silk tiny" x="428" y="521">NOTEON</text>
+<rect class="din" x="385" y="550" width="132" height="112" rx="6"/>
+<circle class="dinhole" cx="443" cy="606" r="38"/>
+<circle class="dinpin" cx="419" cy="606" r="3"/>
+<circle class="dinpin" cx="426" cy="589" r="3"/>
+<circle class="dinpin" cx="443" cy="582" r="3"/>
+<circle class="dinpin" cx="426" cy="623" r="3"/>
+<circle class="dinpin" cx="443" cy="630" r="3"/>
+<text class="silk" x="483" y="610" text-anchor="middle">THRU</text>
+<rect class="din" x="385" y="664" width="132" height="112" rx="6"/>
+<circle class="dinhole" cx="443" cy="720" r="38"/>
+<circle class="dinpin" cx="419" cy="720" r="3"/>
+<circle class="dinpin" cx="426" cy="703" r="3"/>
+<circle class="dinpin" cx="443" cy="696" r="3"/>
+<circle class="dinpin" cx="426" cy="737" r="3"/>
+<circle class="dinpin" cx="443" cy="744" r="3"/>
+<text class="silk" x="483" y="724" text-anchor="middle">IN</text>
+<rect class="hdr" x="201" y="534" width="24" height="86" rx="2"/>
+<rect class="hdrpin" x="209" y="539" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="553" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="567" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="581" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="595" width="8" height="8"/>
+<rect class="hdrpin" x="209" y="609" width="8" height="8"/>
+<text class="silk" x="178" y="560" transform="rotate(-90 178 560)" text-anchor="end">SWD</text>
+<rect class="mcu" x="276" y="584" width="56" height="56" rx="2"/>
+<line class="mcupin" x1="270" y1="590" x2="276" y2="590"/>
+<line class="mcupin" x1="332" y1="590" x2="338" y2="590"/>
+<line class="mcupin" x1="282" y1="578" x2="282" y2="584"/>
+<line class="mcupin" x1="282" y1="640" x2="282" y2="646"/>
+<line class="mcupin" x1="270" y1="596" x2="276" y2="596"/>
+<line class="mcupin" x1="332" y1="596" x2="338" y2="596"/>
+<line class="mcupin" x1="288" y1="578" x2="288" y2="584"/>
+<line class="mcupin" x1="288" y1="640" x2="288" y2="646"/>
+<line class="mcupin" x1="270" y1="602" x2="276" y2="602"/>
+<line class="mcupin" x1="332" y1="602" x2="338" y2="602"/>
+<line class="mcupin" x1="294" y1="578" x2="294" y2="584"/>
+<line class="mcupin" x1="294" y1="640" x2="294" y2="646"/>
+<line class="mcupin" x1="270" y1="608" x2="276" y2="608"/>
+<line class="mcupin" x1="332" y1="608" x2="338" y2="608"/>
+<line class="mcupin" x1="300" y1="578" x2="300" y2="584"/>
+<line class="mcupin" x1="300" y1="640" x2="300" y2="646"/>
+<line class="mcupin" x1="270" y1="614" x2="276" y2="614"/>
+<line class="mcupin" x1="332" y1="614" x2="338" y2="614"/>
+<line class="mcupin" x1="306" y1="578" x2="306" y2="584"/>
+<line class="mcupin" x1="306" y1="640" x2="306" y2="646"/>
+<line class="mcupin" x1="270" y1="620" x2="276" y2="620"/>
+<line class="mcupin" x1="332" y1="620" x2="338" y2="620"/>
+<line class="mcupin" x1="312" y1="578" x2="312" y2="584"/>
+<line class="mcupin" x1="312" y1="640" x2="312" y2="646"/>
+<line class="mcupin" x1="270" y1="626" x2="276" y2="626"/>
+<line class="mcupin" x1="332" y1="626" x2="338" y2="626"/>
+<line class="mcupin" x1="318" y1="578" x2="318" y2="584"/>
+<line class="mcupin" x1="318" y1="640" x2="318" y2="646"/>
+<line class="mcupin" x1="270" y1="632" x2="276" y2="632"/>
+<line class="mcupin" x1="332" y1="632" x2="338" y2="632"/>
+<line class="mcupin" x1="324" y1="578" x2="324" y2="584"/>
+<line class="mcupin" x1="324" y1="640" x2="324" y2="646"/>
+<text class="silk tiny" x="304" y="616" text-anchor="middle">STM32</text>
+<text class="silk tiny" x="304" y="628" text-anchor="middle">F446</text>
+<rect class="smd" x="280" y="664" width="14" height="10"/>
+<circle class="pad" cx="205" cy="624" r="4.5"/>
+<circle class="pad" cx="207" cy="637" r="4.5"/>
+<circle class="pad" cx="210" cy="650" r="4.5"/>
+<circle class="pad" cx="214" cy="663" r="4.5"/>
+<circle class="pad" cx="219" cy="676" r="4.5"/>
+<circle class="pad" cx="226" cy="689" r="4.5"/>
+<circle class="pad" cx="233" cy="702" r="4.5"/>
+<text class="silk tiny" x="244" y="706">J31</text>
+<rect class="button" x="240" y="720" width="40" height="32" rx="3"/>
+<circle class="buttoncap" cx="260" cy="736" r="9"/>
+<text class="silk" x="260" y="772" text-anchor="middle">LEARN</text>
+<rect class="ic" x="340" y="724" width="22" height="16"/>
+<rect class="ic" x="340" y="752" width="22" height="16"/>
+<rect class="ic" x="368" y="772" width="22" height="16"/>
+</g></g>
+<rect class="cropframe" x="360" y="40" width="462.0" height="273.0" rx="12"/>
+<rect class="dev" x="20" y="70" width="270" height="190" rx="10"/>
+<text class="devtitle" x="34.0" y="98.0" text-anchor="start">USB-UART 3.3 В</text>
+<text class="devline" x="34.0" y="120.0" text-anchor="start">CH340, CP2102, FT232…</text>
+<text class="pinname" x="34.0" y="139.5" text-anchor="start">RX ← пин 1 (TX)</text>
+<path class="wire w-blue" d="M290.0,134.5 L502.8,134.5"/>
+<circle class="wireend w-blue" cx="290.0" cy="134.5" r="4"/>
+<circle class="wireend w-blue" cx="502.8" cy="134.5" r="4"/>
+<text class="pinname" x="34.0" y="168.9" text-anchor="start">TX → пин 2 (RX)</text>
+<path class="wire w-amber" d="M290.0,163.9 L502.8,163.9"/>
+<circle class="wireend w-amber" cx="290.0" cy="163.9" r="4"/>
+<circle class="wireend w-amber" cx="502.8" cy="163.9" r="4"/>
+<text class="pinname" x="34.0" y="198.3" text-anchor="start">GND ← пин 3</text>
+<path class="wire w-gnd" d="M290.0,193.3 L502.8,193.3"/>
+<circle class="wireend w-gnd" cx="290.0" cy="193.3" r="4"/>
+<circle class="wireend w-gnd" cx="502.8" cy="193.3" r="4"/>
+<text class="lblsub" x="360.0" y="318.0" text-anchor="start">Пин 1 — верхний. Порядок проверь прозвонкой: GND звонится с пином 3 SWD.</text>
+</svg></div><figcaption>TX платы идёт на RX переходника и наоборот, земля к земле. Скорость 115200.</figcaption></figure>
+<div class="steps"><ul>
+<li>Разъём J22 — три пина: TX, RX, GND. Порядок проверь прозвонкой: GND звонится с пином 3 SWD.</li>
+<li>В терминале: 115200 бод, 8N1. Команды те же, что в COM-порту по USB.</li>
+</ul></div></div></section>
+</div>
+</body></html>
