@@ -30,6 +30,8 @@ typedef struct {
   int32_t override_mv[2]; // <0 = no override
   uint32_t msg_count;
   uint32_t clock_count;
+  int32_t mod_mv;       // envelope + LFO + key tracking added to the filter output
+  uint8_t env_stage;    // 0 idle, 1 attack, 2 decay, 3 sustain, 4 release
 } engine_status_t;
 
 void engine_init(void);

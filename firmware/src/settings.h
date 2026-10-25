@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 #define SETTINGS_MAGIC   0x4D435631u // "MCV1"
-#define SETTINGS_VERSION 1u
+#define SETTINGS_VERSION 2u
 
 #define CHANNEL_OMNI 0xFFu
 
@@ -20,6 +20,40 @@ typedef enum {
   SRC_BEND,        // pitch bend, centre = half range
   SRC_COUNT
 } cv_source_t;
+
+typedef enum {
+  LFO_SINE = 0,
+  LFO_TRIANGLE,
+  LFO_SQUARE,
+  LFO_SAW_UP,
+  LFO_SAW_DOWN,
+  LFO_RANDOM,      // sample & hold, a new random value every cycle
+  LFO_SHAPE_COUNT
+} lfo_shape_t;
+
+typedef enum {
+  GLIDE_RATE = 0,  // glide_ms = time per octave (constant rate, spec default)
+  GLIDE_TIME,      // glide_ms = time of the whole transition (constant time)
+} glide_mode_t;
+
+// Modulation added on top of the filter output's source (CC74 by default):
+// envelope (ADSR) on every note, LFO and key tracking.
+typedef struct {
+  uint16_t attack_ms;  // 0..10000
+  uint16_t decay_ms;   // 0..10000
+  uint16_t release_ms; // 0..10000
+  uint8_t sustain;     // 0..127
+  uint8_t env_vel;     // 0..100 %: how much velocity scales the envelope
+  int16_t env_mv;      // envelope depth, -10000..10000 mV (negative = closes the filter)
+  uint8_t env_retrig;  // 1 = restart the envelope on legato notes too
+  uint8_t lfo_shape;   // lfo_shape_t
+  uint16_t lfo_rate;   // Hz x100, 1..3000 (0.01..30 Hz)
+  uint16_t lfo_mv;     // LFO depth (peak), 0..10000 mV
+  uint8_t lfo_sync;    // 1 = restart the LFO on every new note
+  uint8_t lfo_wheel;   // 1 = mod wheel (CC1) scales the LFO depth
+  uint8_t keytrack;    // 0..100 %: 100 = filter follows the note at 1 V/oct
+  uint8_t reserved[3];
+} filter_mod_t;
 
 typedef struct {
   uint8_t source;      // cv_source_t
@@ -47,6 +81,12 @@ typedef struct {
   uint8_t reserved;
 
   cv_cfg_t cv[2];         // [CV_OUT_JACK], [CV_OUT_FILTER]
+
+  filter_mod_t fmod;      // envelope / LFO / key tracking on the filter output
+
+  uint16_t glide_ms;      // portamento on pitch outputs, 0 = off
+  uint8_t glide_mode;     // glide_mode_t
+  uint8_t glide_legato;   // 1 = glide only between overlapping notes (spec default)
 
   uint32_t crc;
 } settings_t;

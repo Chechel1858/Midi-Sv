@@ -40,6 +40,8 @@ APP_SRC = \
   src/engine.c \
   src/midi_parser.c \
   src/settings.c \
+  src/params.c \
+  src/sysex.c \
   src/console.c \
   src/fmt.c \
   src/usb_descriptors.c \
@@ -104,7 +106,7 @@ $(BUILD)/midi_cv_full.hex: $(BUILD)/bootloader.hex $(BUILD)/midi_cv_alpha.hex
 
 test:
 	@mkdir -p $(BUILD)/test
-	gcc -std=c11 -Wall -Wextra -O1 -g tests/test_main.c src/engine.c src/midi_parser.c src/settings.c -o $(BUILD)/test/run_tests
+	gcc -std=c11 -Wall -Wextra -O1 -g tests/test_main.c src/engine.c src/midi_parser.c src/settings.c src/params.c src/sysex.c -o $(BUILD)/test/run_tests
 	./$(BUILD)/test/run_tests
 	gcc -std=c11 -Wall -Wextra -O1 -g -Icommon tests/test_bootloader.c bootloader/dfu_image.c common/flash_layout.c -o $(BUILD)/test/run_boot_tests
 	./$(BUILD)/test/run_boot_tests

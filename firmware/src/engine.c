@@ -37,6 +37,39 @@ static bool btn_long_fired, btn_omni_fired, btn_factory_fired;
 
 static bool save_requested;
 
+// Portamento: pitch in Q16 semitones relative to zero_note, without bend
+static int32_t pitch_cur_q16, pitch_tgt_q16, glide_step_q16;
+static bool pitch_valid; // a note has been played, so there is something to glide from
+
+// Filter modulation
+#define ENV_FULL (1 << 24)
+static int32_t env_level;      // 0..ENV_FULL
+static int32_t env_scale_q16;  // velocity scaling, latched when the envelope starts
+static uint32_t lfo_phase;
+static int32_t lfo_value;      // -32767..32767
+static int32_t lfo_random;
+static uint32_t rng_state = 0x12345678u;
+static int32_t mod_mv;         // total modulation added to the filter output
+
+static const int16_t k_sine[256] = {
+  0, 804, 1608, 2410, 3212, 4011, 4808, 5602, 6393, 7179, 7962, 8739, 9512, 10278, 11039, 11793,
+  12539, 13279, 14010, 14732, 15446, 16151, 16846, 17530, 18204, 18868, 19519, 20159, 20787, 21403, 22005, 22594,
+  23170, 23731, 24279, 24811, 25329, 25832, 26319, 26790, 27245, 27683, 28105, 28510, 28898, 29268, 29621, 29956,
+  30273, 30571, 30852, 31113, 31356, 31580, 31785, 31971, 32137, 32285, 32412, 32521, 32609, 32678, 32728, 32757,
+  32767, 32757, 32728, 32678, 32609, 32521, 32412, 32285, 32137, 31971, 31785, 31580, 31356, 31113, 30852, 30571,
+  30273, 29956, 29621, 29268, 28898, 28510, 28105, 27683, 27245, 26790, 26319, 25832, 25329, 24811, 24279, 23731,
+  23170, 22594, 22005, 21403, 20787, 20159, 19519, 18868, 18204, 17530, 16846, 16151, 15446, 14732, 14010, 13279,
+  12539, 11793, 11039, 10278, 9512, 8739, 7962, 7179, 6393, 5602, 4808, 4011, 3212, 2410, 1608, 804,
+  0, -804, -1608, -2410, -3212, -4011, -4808, -5602, -6393, -7179, -7962, -8739, -9512, -10278, -11039, -11793,
+  -12539, -13279, -14010, -14732, -15446, -16151, -16846, -17530, -18204, -18868, -19519, -20159, -20787, -21403, -22005, -22594,
+  -23170, -23731, -24279, -24811, -25329, -25832, -26319, -26790, -27245, -27683, -28105, -28510, -28898, -29268, -29621, -29956,
+  -30273, -30571, -30852, -31113, -31356, -31580, -31785, -31971, -32137, -32285, -32412, -32521, -32609, -32678, -32728, -32757,
+  -32767, -32757, -32728, -32678, -32609, -32521, -32412, -32285, -32137, -31971, -31785, -31580, -31356, -31113, -30852, -30571,
+  -30273, -29956, -29621, -29268, -28898, -28510, -28105, -27683, -27245, -26790, -26319, -25832, -25329, -24811, -24279, -23731,
+  -23170, -22594, -22005, -21403, -20787, -20159, -19519, -18868, -18204, -17530, -16846, -16151, -15446, -14732, -14010, -13279,
+  -12539, -11793, -11039, -10278, -9512, -8739, -7962, -7179, -6393, -5602, -4808, -4011, -3212, -2410, -1608, -804,
+};
+
 // ---------------------------------------------------------------------------
 // Output helpers
 
@@ -67,12 +100,16 @@ static void gate_out(bool on) {
   hal_gate_write(on != (g_settings.gate_invert != 0));
 }
 
-// Pitch in Q16 semitones relative to zero_note, including pitch bend
+// Pitch in Q16 semitones relative to zero_note: current (gliding) note plus bend
 static int32_t pitch_q16(void) {
-  int32_t semis = (int32_t) st.note - g_settings.zero_note;
   // bend: 8192 = centre, full deflection = bend_range semitones
   int32_t bend = ((int32_t) st.bend - 8192) * g_settings.bend_range * 8; // x65536/8192
-  return semis * 65536 + bend;
+  return pitch_cur_q16 + bend;
+}
+
+static bool modulated(uint8_t ch) {
+  const filter_mod_t* m = &g_settings.fmod;
+  return ch == CV_OUT_FILTER && st.override_mv[ch] < 0 && (m->env_mv != 0 || m->lfo_mv != 0 || m->keytrack != 0);
 }
 
 static uint16_t compute_target(uint8_t ch) {
@@ -82,8 +119,7 @@ static uint16_t compute_target(uint8_t ch) {
   int64_t full_uv = (int64_t) c->range_mv * 1000;
   switch (c->source) {
     case SRC_PITCH:
-      if (st.note < 0) return st.dac[ch]; // keep last pitch after release
-      // 1 V per 12 semitones: uV = q16 * 1e6 / (12 * 65536)
+      // Holds the last note after release. 1 V per 12 semitones: uV = q16 * 1e6 / (12 * 65536)
       return uv_to_code(ch, (int64_t) pitch_q16() * 1000000 / (12 * 65536));
     case SRC_VELOCITY:
       return uv_to_code(ch, full_uv * st.velocity / 127);
@@ -103,14 +139,152 @@ static bool smoothing_on(uint8_t ch) {
   return c->smooth_ms > 0 && c->source != SRC_PITCH && st.override_mv[ch] < 0;
 }
 
+// Writes base code + modulation (filter output only)
+static void write_output(uint8_t ch, int32_t base_code) {
+  int32_t code = base_code;
+  if (modulated(ch)) {
+    // codes = gain[codes/V x100] * mV / 100000
+    code += (int32_t) (((int64_t) g_settings.cv[ch].cal_gain * mod_mv) / 100000);
+  }
+  dac_out(ch, (uint16_t) clamp_i32(code, 0, DAC_MAX));
+}
+
 // Recomputes an output. Unsmoothed outputs are written right away so that
 // pitch is already settled when the gate goes high.
 static void update_output(uint8_t ch) {
   target_code[ch] = compute_target(ch);
   if (!smoothing_on(ch)) {
     smooth_q16[ch] = (int32_t) target_code[ch] << 16;
-    dac_out(ch, target_code[ch]);
+    write_output(ch, target_code[ch]);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Portamento
+
+static void set_pitch_target(int32_t target, bool legato) {
+  uint16_t g = g_settings.glide_ms;
+  bool glide = g > 0 && pitch_valid && (legato || !g_settings.glide_legato);
+  pitch_tgt_q16 = target;
+  pitch_valid = true;
+  if (!glide) {
+    pitch_cur_q16 = target;
+    glide_step_q16 = 0;
+    return;
+  }
+  int32_t step;
+  if (g_settings.glide_mode == GLIDE_TIME) {
+    int32_t dist = target - pitch_cur_q16;
+    if (dist < 0) dist = -dist;
+    step = dist / g; // whole transition takes glide_ms
+  } else {
+    step = (12 * 65536) / g; // one octave takes glide_ms
+  }
+  glide_step_q16 = step > 0 ? step : 1;
+}
+
+static bool glide_tick(void) {
+  if (pitch_cur_q16 == pitch_tgt_q16) return false;
+  int32_t d = pitch_tgt_q16 - pitch_cur_q16;
+  if (d > glide_step_q16) d = glide_step_q16;
+  if (d < -glide_step_q16) d = -glide_step_q16;
+  pitch_cur_q16 += d;
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Filter envelope and LFO
+
+typedef enum { ENV_IDLE = 0, ENV_ATTACK, ENV_DECAY, ENV_SUSTAIN, ENV_RELEASE } env_stage_t;
+static env_stage_t env_stage;
+
+static void env_start(void) {
+  const filter_mod_t* m = &g_settings.fmod;
+  // 0 % sensitivity = full depth always, 100 % = depth proportional to velocity
+  env_scale_q16 = 65536 - (int32_t) m->env_vel * 65536 / 100 + (int32_t) m->env_vel * st.velocity * 65536 / (100 * 127);
+  env_stage = ENV_ATTACK; // from the current level, so retriggers do not click
+}
+
+static void env_release(void) {
+  if (env_stage != ENV_IDLE) env_stage = ENV_RELEASE;
+}
+
+// One-pole coefficient (Q16) that gets ~99 % of the way in `ms`
+static int32_t exp_alpha(uint16_t ms) {
+  if (ms == 0) return 65536;
+  return 65536 / (ms / 5 + 1);
+}
+
+static void env_tick(void) {
+  const filter_mod_t* m = &g_settings.fmod;
+  int32_t sus = (int32_t) ((int64_t) m->sustain * ENV_FULL / 127);
+  switch (env_stage) {
+    case ENV_ATTACK:
+      env_level = m->attack_ms ? env_level + ENV_FULL / m->attack_ms : ENV_FULL;
+      if (env_level >= ENV_FULL) {
+        env_level = ENV_FULL;
+        env_stage = ENV_DECAY;
+      }
+      break;
+    case ENV_DECAY:
+      env_level += (int32_t) (((int64_t) (sus - env_level) * exp_alpha(m->decay_ms)) >> 16);
+      if (env_level - sus < ENV_FULL / 4096 && sus - env_level < ENV_FULL / 4096) {
+        env_level = sus;
+        env_stage = ENV_SUSTAIN;
+      }
+      break;
+    case ENV_SUSTAIN:
+      env_level = sus; // follows live changes of the sustain level
+      break;
+    case ENV_RELEASE:
+      env_level -= (int32_t) (((int64_t) env_level * exp_alpha(m->release_ms)) >> 16);
+      if (env_level < ENV_FULL / 4096) {
+        env_level = 0;
+        env_stage = ENV_IDLE;
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+static void lfo_tick(void) {
+  const filter_mod_t* m = &g_settings.fmod;
+  uint32_t old = lfo_phase;
+  lfo_phase += (uint32_t) m->lfo_rate * 42950u; // 2^32 / (100 * 1000 ms) per 0.01 Hz
+  if (lfo_phase < old) {
+    rng_state = rng_state * 1664525u + 1013904223u;
+    lfo_random = (int32_t) (rng_state >> 16) - 32768;
+  }
+  int32_t p = (int32_t) (lfo_phase >> 16); // 0..65535
+  switch (m->lfo_shape) {
+    case LFO_SINE: {
+      int32_t i = p >> 8, frac = p & 0xFF;
+      int32_t a = k_sine[i], b = k_sine[(i + 1) & 0xFF];
+      lfo_value = a + (((b - a) * frac) >> 8);
+      break;
+    }
+    case LFO_TRIANGLE: lfo_value = p < 32768 ? p * 2 - 32767 : 32767 - (p - 32768) * 2; break;
+    case LFO_SQUARE: lfo_value = p < 32768 ? 32767 : -32767; break;
+    case LFO_SAW_UP: lfo_value = p - 32768; break;
+    case LFO_SAW_DOWN: lfo_value = 32767 - p; break;
+    case LFO_RANDOM: lfo_value = lfo_random; break;
+    default: lfo_value = 0; break;
+  }
+}
+
+static void update_mod(void) {
+  const filter_mod_t* m = &g_settings.fmod;
+  int64_t mv = 0;
+  mv += (int64_t) m->env_mv * env_level / ENV_FULL * env_scale_q16 / 65536;
+  int32_t depth = m->lfo_mv;
+  if (m->lfo_wheel) depth = depth * cc_values[1] / 127;
+  mv += (int64_t) depth * lfo_value / 32768;
+  // key tracking: keytrack % of 1 V/oct, from the (gliding) note relative to zero_note
+  mv += (int64_t) m->keytrack * pitch_cur_q16 * 10 / (12 * 65536);
+  mod_mv = (int32_t) (mv < -20000 ? -20000 : (mv > 20000 ? 20000 : mv));
+  st.mod_mv = mod_mv;
+  st.env_stage = (uint8_t) env_stage;
 }
 
 static void update_outputs_for(cv_source_t src) {
@@ -149,13 +323,19 @@ static void apply_stack(bool new_note_on) {
     st.gate = false;
     st.note = -1;
     gate_out(false);
+    env_release();
     return;
   }
 
   st.note = (int8_t) stack[st.stack_len - 1];
+  if (st.note != prev || !was_gate) {
+    set_pitch_target(((int32_t) st.note - g_settings.zero_note) * 65536, was_gate);
+  }
   // Pitch first, then gate
   update_outputs_for(SRC_PITCH);
   update_outputs_for(SRC_VELOCITY);
+
+  if (!was_gate || (new_note_on && g_settings.fmod.env_retrig)) env_start();
 
   st.gate = true;
   if (was_gate && new_note_on && st.note != prev && g_settings.gate_retrigger) {
@@ -169,6 +349,7 @@ static void apply_stack(bool new_note_on) {
 static void note_on(uint8_t note, uint8_t vel) {
   key_down[note] = true;
   st.velocity = vel;
+  if (g_settings.fmod.lfo_sync) lfo_phase = 0;
   stack_push(note);
   apply_stack(true);
 }
@@ -419,14 +600,22 @@ void engine_tick_1ms(void) {
 
   if (st.learn != LEARN_NONE && now - learn_started >= LEARN_TIMEOUT_MS) st.learn = LEARN_NONE;
 
+  if (glide_tick()) update_outputs_for(SRC_PITCH);
+
+  env_tick();
+  lfo_tick();
+  update_mod();
+
   for (uint8_t ch = 0; ch < CV_OUT_COUNT; ch++) {
-    if (!smoothing_on(ch)) continue;
-    int32_t target = (int32_t) target_code[ch] << 16;
-    int32_t alpha_q16 = 65536 / (g_settings.cv[ch].smooth_ms + 1);
-    smooth_q16[ch] += (int32_t) (((int64_t) (target - smooth_q16[ch]) * alpha_q16) >> 16);
-    // close the last fraction so the output really reaches the target
-    if (smooth_q16[ch] - target < 65536 && target - smooth_q16[ch] < 65536) smooth_q16[ch] = target;
-    dac_out(ch, (uint16_t) ((smooth_q16[ch] + 32768) >> 16));
+    bool smooth = smoothing_on(ch);
+    if (smooth) {
+      int32_t target = (int32_t) target_code[ch] << 16;
+      int32_t alpha_q16 = 65536 / (g_settings.cv[ch].smooth_ms + 1);
+      smooth_q16[ch] += (int32_t) (((int64_t) (target - smooth_q16[ch]) * alpha_q16) >> 16);
+      // close the last fraction so the output really reaches the target
+      if (smooth_q16[ch] - target < 65536 && target - smooth_q16[ch] < 65536) smooth_q16[ch] = target;
+    }
+    if (smooth || modulated(ch)) write_output(ch, (smooth_q16[ch] + 32768) >> 16);
   }
 
   update_leds(now);
@@ -460,18 +649,21 @@ void engine_init(void) {
   save_requested = false;
   btn_raw = btn_state = false;
   btn_stable_ms = 0;
+  pitch_cur_q16 = pitch_tgt_q16 = 0; // pitch outputs start at 0 V until the first note
+  glide_step_q16 = 0;
+  pitch_valid = false;
+  env_stage = ENV_IDLE;
+  env_level = 0;
+  env_scale_q16 = 65536;
+  lfo_phase = 0;
+  lfo_value = 0;
+  mod_mv = 0;
 
   gate_out(false);
   hal_clock_write(false);
   hal_led_note(false);
   hal_led_aux(true);
 
-  // Pitch outputs start at 0 V until the first note arrives
-  for (uint8_t ch = 0; ch < CV_OUT_COUNT; ch++) {
-    if (g_settings.cv[ch].source == SRC_PITCH) {
-      dac_out(ch, engine_mv_to_code(ch, 0));
-    }
-  }
   engine_settings_changed();
 }
 

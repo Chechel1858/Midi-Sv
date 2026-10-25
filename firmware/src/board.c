@@ -102,17 +102,20 @@ static void uart_irq(USART_TypeDef* u, ring_t* rx, ring_t* tx, volatile uint32_t
 void USART2_IRQHandler(void) { uart_irq(USART2, &midi_rx, &midi_tx, &midi_err); }
 void USART1_IRQHandler(void) { uart_irq(USART1, &dbg_rx, &dbg_tx, NULL); }
 
-static void uart_send(USART_TypeDef* u, ring_t* tx, uint8_t b) {
-  if (ring_put(tx, b)) u->CR1 |= USART_CR1_TXEIE;
+static bool uart_send(USART_TypeDef* u, ring_t* tx, uint8_t b) {
+  bool ok = ring_put(tx, b);
+  if (ok) u->CR1 |= USART_CR1_TXEIE;
+  return ok;
 }
 
 bool midi_uart_read(uint8_t* b) { return ring_get(&midi_rx, b); }
-void midi_uart_write(uint8_t b) { uart_send(USART2, &midi_tx, b); }
+void midi_uart_write(uint8_t b) { (void) uart_send(USART2, &midi_tx, b); }
+bool midi_uart_try_write(uint8_t b) { return uart_send(USART2, &midi_tx, b); }
 uint32_t midi_uart_errors(void) { return midi_err; }
 
 bool debug_uart_read(uint8_t* b) { return ring_get(&dbg_rx, b); }
 void debug_uart_write(const uint8_t* p, uint32_t n) {
-  while (n--) uart_send(USART1, &dbg_tx, *p++);
+  while (n--) (void) uart_send(USART1, &dbg_tx, *p++);
 }
 
 static void uart_init(void) {

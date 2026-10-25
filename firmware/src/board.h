@@ -55,6 +55,7 @@ bool board_button_pressed(void);
 // DIN MIDI (USART2)
 bool midi_uart_read(uint8_t* b);
 void midi_uart_write(uint8_t b); // drops bytes if the TX buffer is full
+bool midi_uart_try_write(uint8_t b); // false if the TX buffer is full
 uint32_t midi_uart_errors(void);
 
 // Debug UART (USART1 on J22)

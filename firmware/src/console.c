@@ -8,10 +8,10 @@
 #include "engine.h"
 #include "fmt.h"
 #include "hal.h"
+#include "params.h"
 #include "settings.h"
 #include "tusb.h"
-
-#define FW_VERSION "0.1.0"
+#include "version.h"
 
 static char line[96];
 static uint8_t line_len;
@@ -97,8 +97,20 @@ static void cmd_status(void) {
                  g_settings.bend_range, g_settings.gate_retrigger ? "on" : "off", g_settings.gate_invert ? "on" : "off");
   console_printf("clock out: every %u MIDI clocks, %u ms pulse\r\n", g_settings.clock_div, g_settings.clock_pulse_ms);
   for (int ch = 0; ch < CV_OUT_COUNT; ch++) print_out_cfg(ch);
-  console_printf("now: gate=%d note=%d vel=%u bend=%u dac=[%u %u] held=%u\r\n", s->gate, s->note, s->velocity, s->bend,
-                 s->dac[0], s->dac[1], s->stack_len);
+  const filter_mod_t* m = &g_settings.fmod;
+  console_printf("filter env: %dmV  A=%u D=%u S=%u R=%u ms  vel=%u%%%s\r\n", m->env_mv, m->attack_ms, m->decay_ms,
+                 m->sustain, m->release_ms, m->env_vel, m->env_retrig ? " retrig" : "");
+  console_printf("filter lfo: %umV %s %u.%02u Hz%s%s  keytrack=%u%%\r\n", m->lfo_mv,
+                 param_value_name(param_by_name("lfoshape"), m->lfo_shape), m->lfo_rate / 100, m->lfo_rate % 100,
+                 m->lfo_sync ? " sync" : "", m->lfo_wheel ? " wheel" : "", m->keytrack);
+  if (g_settings.glide_ms) {
+    console_printf("glide: %u ms %s, %s\r\n", g_settings.glide_ms, g_settings.glide_mode == GLIDE_TIME ? "total" : "per octave",
+                   g_settings.glide_legato ? "legato only" : "always");
+  } else {
+    console_printf("glide: off\r\n");
+  }
+  console_printf("now: gate=%d note=%d vel=%u bend=%u dac=[%u %u] held=%u mod=%ldmV\r\n", s->gate, s->note, s->velocity,
+                 s->bend, s->dac[0], s->dac[1], s->stack_len, (long) s->mod_mv);
   console_printf("midi msgs=%lu din errors=%lu usb=%s\r\n", (unsigned long) s->msg_count,
                  (unsigned long) midi_uart_errors(), tud_mounted() ? "connected" : "not connected");
 }
@@ -120,6 +132,9 @@ static void cmd_help(void) {
     "  gate <on|off>              force the gate (testing)\r\n"
     "  cal <jack|filter> <mV@1V> <mV@8V>  calibrate from two measurements\r\n"
     "  learn <filter|jack|ch>     same as the LEARN button\r\n"
+    "  p                          list all parameters (filter envelope, LFO, glide...)\r\n"
+    "  p <name> <value>           change one, e.g. 'p env 5000', 'p lfoshape tri'\r\n"
+    "  preset <pluck|pad|wobble|off>  ready-made filter modulation\r\n"
     "  save                       store settings in flash\r\n"
     "  defaults                   factory settings (then 'save')\r\n"
     "  panic                      all notes off\r\n"
@@ -158,6 +173,60 @@ static bool calibrate(int ch, long m1, long m2) {
   if (zero < -2000 || zero > 2000) return false;
   g_settings.cv[ch].cal_gain = (uint16_t) gain;
   g_settings.cv[ch].cal_zero = (int16_t) zero;
+  return true;
+}
+
+static void print_param(const param_t* p) {
+  int32_t v = param_get(&g_settings, p);
+  const char* name = param_value_name(p, v);
+  if (name) console_printf("  %-14s %-8s", p->name, name);
+  else console_printf("  %-14s %-8ld", p->name, (long) v);
+  console_printf(" (%ld..%ld %s)\r\n", (long) p->min, (long) p->max, p->unit);
+}
+
+static void cmd_params(void) {
+  for (unsigned i = 0; i < param_count(); i++) print_param(param_at(i));
+}
+
+// Returns false on a bad name or value
+static bool cmd_param_set(const char* name, const char* text) {
+  const param_t* p = param_by_name(name);
+  int32_t v;
+  if (!p) {
+    console_printf("no parameter '%s', type 'p' for the list\r\n", name);
+    return true;
+  }
+  if (!text) {
+    print_param(p);
+    return true;
+  }
+  if (p->flags & PARAM_READONLY) return false;
+  return param_parse(p, text, &v) && param_set(&g_settings, p, v);
+}
+
+static bool cmd_preset(const char* name) {
+  filter_mod_t* m = &g_settings.fmod;
+  if (!name) return false;
+  if (!strcmp(name, "off")) {
+    m->env_mv = 0;
+    m->lfo_mv = 0;
+    m->keytrack = 0;
+  } else if (!strcmp(name, "pluck")) { // short bright "pluck" on every note
+    m->attack_ms = 2, m->decay_ms = 250, m->sustain = 0, m->release_ms = 150;
+    m->env_mv = 6000, m->env_vel = 60, m->env_retrig = 1;
+    m->lfo_mv = 0, m->keytrack = 50;
+  } else if (!strcmp(name, "pad")) { // slow swell with a gentle sweep
+    m->attack_ms = 800, m->decay_ms = 1500, m->sustain = 90, m->release_ms = 1500;
+    m->env_mv = 4000, m->env_vel = 0, m->env_retrig = 0;
+    m->lfo_shape = LFO_SINE, m->lfo_rate = 30, m->lfo_mv = 600, m->lfo_sync = 0, m->lfo_wheel = 0;
+    m->keytrack = 30;
+  } else if (!strcmp(name, "wobble")) { // LFO wobble, depth on the mod wheel
+    m->env_mv = 0;
+    m->lfo_shape = LFO_SINE, m->lfo_rate = 400, m->lfo_mv = 4000, m->lfo_sync = 1, m->lfo_wheel = 1;
+    m->keytrack = 0;
+  } else {
+    return false;
+  }
   return true;
 }
 
@@ -238,6 +307,17 @@ static void execute(char* cmdline) {
     else if (argv[1] && !strcmp(argv[1], "ch")) engine_learn(LEARN_CHANNEL);
     else ok = false;
     if (ok) console_printf("waiting for MIDI (10 s)...\r\n");
+  } else if (!strcmp(cmd, "p")) {
+    if (!argv[1]) cmd_params();
+    else {
+      ok = cmd_param_set(argv[1], argv[2]);
+      changed = ok && argv[2];
+    }
+  } else if (!strcmp(cmd, "preset")) {
+    ok = cmd_preset(argv[1]);
+    if (ok) console_printf("filter base is still CC%u; move it (or 'p filter.src off') to hear the full sweep\r\n",
+                           g_settings.cv[CV_OUT_FILTER].cc);
+    changed = ok;
   } else if (!strcmp(cmd, "save")) {
     ok = settings_save(&g_settings);
     console_printf(ok ? "saved\r\n" : "flash write FAILED\r\n");
